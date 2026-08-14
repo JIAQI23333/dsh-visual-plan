@@ -1,0 +1,172 @@
+/**
+ * Plan editor state machine.
+ *
+ * Holds the approved base plan and the user's working copy. All mutations go
+ * through `planReducer` (immutable updates); dependencies stay the single
+ * source of truth and edges are re-derived after every change. Adding a
+ * dependency that would create a cycle is rejected with an error.
+ */
+
+import { deriveEdges } from '../engine/markdown.ts'
+import { diffPlans } from '../engine/diff.ts'
+import { hasCycle } from '../schema/validate.ts'
+import type { PlanComment, PlanDiff, PlanTask, VisualPlan } from '../schema/types.ts'
+
+export interface PlanEditorState {
+  /** The last approved plan (extracted or submitted). */
+  base: VisualPlan
+  /** The working copy under edit. */
+  current: VisualPlan
+  /** True while the working copy differs from base. */
+  dirty: boolean
+  /** Last reducer rejection message (e.g. circular dependency). */
+  error: string | null
+}
+
+export type PlanAction =
+  | { type: 'reset'; plan: VisualPlan }
+  | { type: 'discard' }
+  | { type: 'applied' }
+  | { type: 'editTask'; taskId: string; patch: Partial<Omit<PlanTask, 'id'>> }
+  | { type: 'addTask'; task: Omit<PlanTask, 'id'> & { id?: string } }
+  | { type: 'deleteTask'; taskId: string }
+  | { type: 'addDependency'; taskId: string; dependencyId: string }
+  | { type: 'removeDependency'; taskId: string; dependencyId: string }
+  | { type: 'addComment'; taskId: string; content: string; author: string }
+  | { type: 'removeComment'; commentId: string }
+
+export function createEditorState(plan: VisualPlan): PlanEditorState {
+  return { base: plan, current: plan, dirty: false, error: null }
+}
+
+function clonePlan(plan: VisualPlan): VisualPlan {
+  return JSON.parse(JSON.stringify(plan)) as VisualPlan
+}
+
+function nextTaskId(tasks: readonly PlanTask[]): string {
+  const max = tasks.reduce((m, t) => {
+    const n = Number(/^task_(\d+)$/.exec(t.id)?.[1] ?? 0)
+    return Math.max(m, n)
+  }, 0)
+  return `task_${String(max + 1).padStart(3, '0')}`
+}
+
+function nextCommentId(comments: readonly PlanComment[]): string {
+  const max = comments.reduce((m, c) => {
+    const n = Number(/^comment_(\d+)$/.exec(c.id)?.[1] ?? 0)
+    return Math.max(m, n)
+  }, 0)
+  return `comment_${String(max + 1).padStart(3, '0')}`
+}
+
+export function planReducer(state: PlanEditorState, action: PlanAction): PlanEditorState {
+  switch (action.type) {
+    case 'reset':
+      return createEditorState(action.plan)
+
+    case 'discard':
+      return { ...state, current: clonePlan(state.base), dirty: false, error: null }
+
+    case 'applied':
+      return { ...state, base: clonePlan(state.current), dirty: false, error: null }
+
+    case 'editTask': {
+      const current = clonePlan(state.current)
+      const task = current.tasks.find((t) => t.id === action.taskId)
+      if (!task) return { ...state, error: `Task ${action.taskId} not found.` }
+      Object.assign(task, action.patch)
+      current.edges = deriveEdges(current.tasks)
+      return { ...state, current, dirty: true, error: null }
+    }
+
+    case 'addTask': {
+      const current = clonePlan(state.current)
+      const id = action.task.id ?? nextTaskId(current.tasks)
+      if (current.tasks.some((t) => t.id === id)) return { ...state, error: `Duplicate task id ${id}.` }
+      current.tasks.push({
+        id,
+        title: action.task.title,
+        description: action.task.description,
+        type: action.task.type,
+        status: action.task.status,
+        dependencies: action.task.dependencies ?? [],
+        files: action.task.files,
+        metadata: action.task.metadata ?? {},
+      })
+      current.edges = deriveEdges(current.tasks)
+      return { ...state, current, dirty: true, error: null }
+    }
+
+    case 'deleteTask': {
+      const current = clonePlan(state.current)
+      if (!current.tasks.some((t) => t.id === action.taskId)) return { ...state, error: `Task ${action.taskId} not found.` }
+      current.tasks = current.tasks
+        .filter((t) => t.id !== action.taskId)
+        .map((t) => ({
+          ...t,
+          dependencies: t.dependencies.filter((d) => d !== action.taskId),
+        }))
+      current.comments = current.comments.filter((c) => c.taskId !== action.taskId)
+      current.edges = deriveEdges(current.tasks)
+      return { ...state, current, dirty: true, error: null }
+    }
+
+    case 'addDependency': {
+      if (action.taskId === action.dependencyId) {
+        return { ...state, error: 'A task cannot depend on itself.' }
+      }
+      const current = clonePlan(state.current)
+      const task = current.tasks.find((t) => t.id === action.taskId)
+      if (!task) return { ...state, error: `Task ${action.taskId} not found.` }
+      if (task.dependencies.includes(action.dependencyId)) return state
+      task.dependencies.push(action.dependencyId)
+      current.edges = deriveEdges(current.tasks)
+      if (hasCycle(current)) {
+        return { ...state, error: 'Circular dependency detected. This connection was not applied.' }
+      }
+      return { ...state, current, dirty: true, error: null }
+    }
+
+    case 'removeDependency': {
+      const current = clonePlan(state.current)
+      const task = current.tasks.find((t) => t.id === action.taskId)
+      if (!task) return state
+      task.dependencies = task.dependencies.filter((d) => d !== action.dependencyId)
+      current.edges = deriveEdges(current.tasks)
+      return { ...state, current, dirty: true, error: null }
+    }
+
+    case 'addComment': {
+      const content = action.content.trim()
+      if (content === '') return state
+      const current = clonePlan(state.current)
+      if (!current.tasks.some((t) => t.id === action.taskId)) return state
+      current.comments.push({
+        id: nextCommentId(current.comments),
+        taskId: action.taskId,
+        content,
+        author: action.author,
+        createdAt: Date.now(),
+      })
+      return { ...state, current, dirty: true, error: null }
+    }
+
+    case 'removeComment': {
+      const current = clonePlan(state.current)
+      const before = current.comments.length
+      current.comments = current.comments.filter((c) => c.id !== action.commentId)
+      if (current.comments.length === before) return state
+      return { ...state, current, dirty: true, error: null }
+    }
+  }
+}
+
+/** Tasks that depend on the given task (used by the delete confirmation). */
+export function dependentsOf(plan: VisualPlan, taskId: string): PlanTask[] {
+  return plan.tasks.filter((t) => t.dependencies.includes(taskId))
+}
+
+/** Convenience: compute the diff between base and current. */
+export function currentDiff(state: PlanEditorState): PlanDiff {
+  return diffPlans(state.base, state.current)
+}
