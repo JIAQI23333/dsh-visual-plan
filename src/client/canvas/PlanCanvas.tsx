@@ -165,8 +165,13 @@ export function PlanCanvas(props: PlanCanvasProps): JSX.Element {
     setSubmitting(true)
     setSubmitError(null)
     try {
-      await savePlanToHost(sessionId, state.current, diff, 'user')
-      const message = buildRevisedPlanMessage(state.current, diff)
+      const approved: VisualPlan = {
+        ...state.current,
+        version: state.base.version + 1,
+        status: 'executing',
+      }
+      await savePlanToHost(sessionId, approved, diff, 'user')
+      const message = buildRevisedPlanMessage(approved, diff)
       inputActions.setDraft(message)
       inputActions.submit()
       dispatch({ type: 'applied' })

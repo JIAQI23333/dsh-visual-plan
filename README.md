@@ -49,6 +49,18 @@ npm run build       # tsc host + client, then tsdown client bundle
 npm run verify      # offline contract + pure-logic verification
 ```
 
+## E2E
+
+With a running DSH web profile that composes this package (`dsh --profile web`):
+
+```sh
+node scripts/gui-probe.mjs [url]        # tab registration + view mounting
+node scripts/e2e-plan-flow.mjs [url]    # /plan → approve → nodes on canvas
+```
+
+The full plan-flow script needs a working model and completes the acceptance
+chain: plan mode → `exit_plan_mode` → VisualPlan → canvas.
+
 ## Data layout
 
 Each approved plan is stored in the session's workspace:

@@ -54,7 +54,20 @@ if (tabs.length === 0) {
     await ta.press('Enter')
     console.log('  sent first message to activate session')
   }
-  await page.waitForTimeout(12000)
+  // Let the UI settle, then wait for the current turn to finish: the
+  // conversation body must contain the completed-turn stats row ("详情"),
+  // and the current sidebar entry must stop reporting running/queued state.
+  await page.waitForTimeout(8000)
+  await page.waitForFunction(
+    () => {
+      const ta = document.querySelector('textarea')
+      const sessionBody = document.querySelector('[data-slot="conversation.session"]')?.textContent ?? ''
+      const head = document.body.innerText.slice(0, 300)
+      return ta !== null && !ta.disabled && !/进行中|等待回答/.test(head) && /详情/.test(sessionBody)
+    },
+    { timeout: 300000 },
+  ).catch(() => console.log('  (turn-wait timeout; continuing)'))
+  await page.waitForTimeout(2000)
   tabs = await readTabs(page)
 }
 console.log(`  session tabs: ${JSON.stringify(tabs)}`)
@@ -73,14 +86,21 @@ if (planIdx !== -1) {
     const btns = header ? Array.from(header.querySelectorAll('button')) : []
     btns[idx]?.click()
   }, planIdx)
-  await page.waitForTimeout(3000)
-  const state = await page.evaluate(() => ({
-    hasCanvas: Boolean(document.querySelector('.react-flow')),
-    hasEmpty: /还没有可视化计划|No plan yet/.test(document.body.innerText),
-    hasToolbar: /Apply Changes/.test(document.body.innerText),
-  }))
-  check('Visual Plan view mounts (canvas or empty state)', state.hasCanvas || state.hasEmpty, JSON.stringify(state))
-  check('toolbar affordance present when canvas shown', !state.hasCanvas || state.hasToolbar, JSON.stringify(state))
+  // The view switch is async; poll until the canvas or the empty state mounts.
+  let mounted = false
+  let state = null
+  for (let i = 0; i < 15; i += 1) {
+    state = await page.evaluate(() => ({
+      hasCanvas: Boolean(document.querySelector('.react-flow')),
+      hasEmpty: /还没有可视化计划|No plan yet/.test(document.body.innerText),
+      hasToolbar: /Apply Changes/.test(document.body.innerText),
+      bodyHead: document.body.innerText.slice(0, 200),
+    }))
+    if (state.hasCanvas || state.hasEmpty) { mounted = true; break }
+    await page.waitForTimeout(1000)
+  }
+  check('Visual Plan view mounts (canvas or empty state)', mounted, JSON.stringify(state?.bodyHead ?? null))
+  check('toolbar affordance present when canvas shown', state === null || !state.hasCanvas || state.hasToolbar, JSON.stringify(state))
 }
 
 const fatal = consoleErrors.filter((e) => !/favicon|net::ERR|ResizeObserver|downloadable font/i.test(e))

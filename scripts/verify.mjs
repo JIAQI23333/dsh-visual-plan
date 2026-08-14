@@ -216,6 +216,13 @@ check('edits mark the editor dirty', editor.dirty === true)
 editor = planReducer(editor, { type: 'discard' })
 check('discard restores the base plan', editor.dirty === false && editor.current.tasks.length === plan.tasks.length)
 
+// Apply bumps the version and moves the plan to executing (v1 → v2).
+let applier = createEditorState(plan)
+applier = planReducer(applier, { type: 'addTask', task: { title: '新增步骤', description: '', type: 'other', status: 'pending', dependencies: [], metadata: {} } })
+applier = planReducer(applier, { type: 'applied' })
+check('applied bumps version v1 → v2', applier.base.version === 2 && applier.dirty === false, `version=${applier.base.version}`)
+check('applied moves status to executing', applier.base.status === 'executing', applier.base.status)
+
 // --- Write-back message ---
 const message = buildRevisedPlanMessage(edited, diff)
 check('write-back message announces user approval', message.includes('explicitly approved by the user'))

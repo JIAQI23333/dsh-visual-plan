@@ -67,8 +67,14 @@ export function planReducer(state: PlanEditorState, action: PlanAction): PlanEdi
     case 'discard':
       return { ...state, current: clonePlan(state.base), dirty: false, error: null }
 
-    case 'applied':
-      return { ...state, base: clonePlan(state.current), dirty: false, error: null }
+    case 'applied': {
+      // Approving a revision bumps the version and moves the plan into
+      // execution (v1 → v2 → v3 …, per the versioning contract).
+      const next = clonePlan(state.current)
+      next.version = state.base.version + 1
+      next.status = 'executing'
+      return { ...state, base: next, current: next, dirty: false, error: null }
+    }
 
     case 'editTask': {
       const current = clonePlan(state.current)

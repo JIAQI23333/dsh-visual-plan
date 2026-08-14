@@ -60,7 +60,8 @@ function PlanView(props: PlanViewProps): JSX.Element {
   useEffect(() => {
     if (extracted === null || extractionKey === lastKey.current) return
     lastKey.current = extractionKey
-    setEditor((prev) => (prev !== null && !prev.dirty ? prev : createEditorState(extracted.plan)))
+    // Adopt a new plan from the agent; never clobber an in-progress edit.
+    setEditor((prev) => (prev !== null && prev.dirty ? prev : createEditorState(extracted.plan)))
   }, [extractionKey, extracted])
 
   const dispatch = (action: PlanAction): void => {
