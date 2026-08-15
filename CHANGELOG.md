@@ -46,5 +46,5 @@
 
 ## 版本链接
 
-[0.1.0]: https://github.com/<owner>/dsh-visual-plan/releases/tag/v0.1.0
-[Unreleased]: https://github.com/<owner>/dsh-visual-plan/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/JIAQI23333/dsh-visual-plan/releases/tag/v0.1.0
+[Unreleased]: https://github.com/JIAQI23333/dsh-visual-plan/compare/v0.1.0...HEAD
