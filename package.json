@@ -3,6 +3,19 @@
   "version": "0.1.0",
   "description": "Visual plan mode for DeepSeek Harness: structured plan.json + plan.md, an editable React Flow canvas, comments, plan diff, versioned revisions, and reliable write-back to the agent.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JIAQI23333/dsh-visual-plan.git"
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "plugin",
+    "visual-plan",
+    "plan-mode",
+    "react-flow",
+    "dagre"
+  ],
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
@@ -10,6 +23,9 @@
     "lib",
     "cordis.patch.yml",
     "README.md",
+    "README.en.md",
+    "CHANGELOG.md",
+    "ROADMAP.md",
     "LICENSE"
   ],
   "engines": {
