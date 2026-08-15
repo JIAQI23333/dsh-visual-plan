@@ -1,127 +1,92 @@
 # 路线图 / Roadmap
 
-## v0.1 — 可视化计划 MVP（已完成，待首次发布）
+> 方向定位：dsh-visual-plan 不是「插件小功能」，而是 DeepSeek Harness 的
+> **Human Control Layer（人类控制层）**——让用户看得见、改得动、批得准 Agent 的计划。
+> 最大的技术风险不在 Canvas，而在 **Plan 生命周期管理、版本与执行绑定、Agent 修改计划权限控制**。
 
-第一版目标：证明 **DSH 的计划能被结构化转换为可视化节点图，用户能修改这张图，并把修改后的计划可靠地交还给 DSH 执行**。
+## v0.1 — Visual Plan MVP（已完成 ✓）
 
-已完成：
+- [x] Visual Plan MVP
+- [x] DSH Adapter（`exit_plan_mode` → VisualPlan；VisualPlan → 修订计划回写消息）
+- [x] Canvas（DAG 自动布局、缩放、平移、选择、Minimap、Fit View）
+- [x] Editing（新增 / 删除 / 编辑任务、依赖连线）
+- [x] Comment（任务批注）
+- [x] Diff（结构化 Plan Diff）
+- [x] Version（v1 → vN，`revisions/vN.json` 不可变快照）
+- [x] Apply → DSH（回写消息绑定批准版本，禁止静默改计划）
+- [x] 首次发布（GitHub、fresh profile 验证、v0.1.0 tag）
 
-- [x] VisualPlan / Task / Edge / Comment / Version 数据模型与 schema 校验
-- [x] 依赖校验（不存在 / 自依赖 / 循环依赖检测）
-- [x] Markdown ⇄ VisualPlan 转换引擎
-- [x] DeepSeek Harness 适配器（`exit_plan_mode` → VisualPlan；VisualPlan → 修订计划回写消息）
-- [x] React Flow 节点图画布（DAG 自动布局、拖拽、缩放、平移、选择、Minimap、Fit View）
-- [x] 任务编辑：新增 / 删除 / 编辑（标题、描述、类型、状态、依赖）
-- [x] 批注系统（任务评论）
-- [x] Plan Diff（新增 / 删除 / 修改 / 依赖变更）
-- [x] 版本化持久化 `.plan/`（plan.json + plan.md + revisions/vN.json）
-- [x] 修订计划回写 DSH 并继续执行
-- [x] Plan ↔ Agent 状态边界：`plan.status / version / approvedVersion / executionVersion`，执行绑定批准版本
-- [x] 画布偏好：主题跟随 / 白天 / 黑夜、地图开关、全屏、交互开关（本地持久化）
-- [x] 中英双语界面，跟随 DSH Language 设置（默认中文）
-- [x] 验证：77 项离线契约 + 纯逻辑检查；GUI probe 与 plan-flow E2E 脚本
+## v0.1.1 — Editor Foundation + Execution Safety（计划已定，待开发）
 
-待首次发布（Release）：
+目标：补齐编辑器基础与执行安全，**不引入新的大功能**。
 
-- [x] GitHub 仓库发布（`dsh-plugin` topic）
-- [x] 全新 profile 从零安装验证（GitHub 分发路径）：
-  真实执行 `dsh plugin --profile <scratch> add github:JIAQI23333/dsh-visual-plan`，
-  prepare 构建成功、`--dump-config` 含插件层、web boot 通过、GUI probe 全绿（标签注册 + 视图挂载 + 0 控制台错误）。
-- [x] 首次 release tag（v0.1.0）与 CHANGELOG 对齐
-
-### Plan ↔ Agent 状态边界（v0.1 已落地）
-
-```text
-Plan v1（Agent 生成）     reviewing     approvedVersion = null   executionVersion = null
-        │ 用户 Apply
-        ▼
-Plan v2（用户批准）       executing     approvedVersion = 2      executionVersion = 2
-        │ 后续草稿 v3
-        ▼
-Plan v3（新草稿）         draft         approvedVersion = 2      executionVersion = 2
-```
-
-执行永远绑定到 `approvedVersion` / `executionVersion`；回写消息显式声明批准版本，
-并要求 Agent 执行中遇到变化时先提出新计划、由用户批准，而不是静默修改已批准的计划。
-
-## v0.1.1 — 编辑基础体验与执行绑定（计划已定，待开发）
-
-目标：补齐节点编辑器的基本功（Undo/Redo + 快捷键），并把 v0.1 的
-「执行绑定批准版本」承诺在数据层闭环（Plan Snapshot + Execution Version Lock）。
-**不引入新的大功能**，全部为补强与修补。
-
-### P0 — 编辑基础体验
+### P0
 
 - [ ] **Undo / Redo**
-  - `PlanEditorState` 增加 `past / future` 快照栈（深度上限 100），所有 reducer 变更入栈。
-  - 工具栏按钮 + 快捷键（Cmd/Ctrl+Z / Shift+Z），无可撤销/重做时禁用。
-  - `discard`、`applied`、`reset` 清空历史；评论增删同样可撤销。
-  - 测试：连续操作撤销/重做还原、深度上限、applied 后历史清空。
-- [ ] **快捷键**（仅在输入框未聚焦时生效，不拦截打字）
-  - Delete / Backspace：删除选中节点（复用现有确认流程）
-  - Cmd/Ctrl + Z / Cmd/Ctrl + Shift + Z：撤销 / 重做
-  - Cmd/Ctrl + S：打开 Diff 确认（等价「应用修改」）
-  - Space：画布平移；F：Fit View
-  - 快捷键提示写入 i18n（中英），工具栏按钮 title 同步
-
-### P0 — 执行绑定闭环
-
-- [ ] **Plan Snapshot**
-  - 执行开始（Apply）时把不可变快照绑定到 `revisions/vN.json`（该文件本就不可变）。
-  - 新增 `.plan/execution.json`：`{ planId, executionVersion, revision, startedAt, status }`；
-    Apply 时写入，后续草稿 / 新 Apply 不得修改它。
-  - 测试：Apply 创建 execution 记录；v5 保存后 v4 的 execution 记录不变。
+  - `PlanEditorState` 增加 `past / future` 快照栈（深度上限 100）；所有 reducer 变更入栈。
+  - 工具栏按钮 + Cmd/Ctrl+Z / Cmd/Ctrl+Shift+Z；`discard` / `applied` / `reset` 清空历史。
+- [ ] **Shortcut**（输入框聚焦时不生效）
+  - Delete / Backspace 删除选中节点；Cmd/Ctrl+S 打开 Diff；Space 平移；F Fit View。
+- [ ] **Plan State Machine**
+  - 显式状态机：`draft → reviewing → approved → executing → completed / failed`。
+  - 定义允许的迁移与守卫（如 executing 不得直接回 draft；failed 只能由 executing 进入）。
+  - schema 校验加入状态迁移规则；UI 状态徽标与状态机一致。
+- [ ] **Snapshot**
+  - Apply 时写入 `.plan/execution.json`：`{ planId, executionVersion, revision, startedAt, status }`，
+    绑定不可变 `revisions/vN.json`；后续草稿 / 新 Apply 不得修改。
 - [ ] **Execution Version Lock**
-  - 不变式：`executionVersion` 一旦写入即为只读，任何编辑 / Apply 不得改写。
-  - 执行中 Apply：`approvedVersion` 正常 +1（v5），但 `executionVersion` 保持 v4；
-    工具栏显示「v5 · 已批准 v5 · 执行中 v4」。
-  - 回写消息继续绑定 v4；v5 在 v4 完成（或用户显式启动）前不交给 Agent。
-  - schema 校验：对 executing 计划拒绝 / 修复 `executionVersion` 变化。
-  - 测试：锁不变式、执行中 Apply 的行为、校验规则。
+  - `executionVersion` 一旦写入即只读；执行中 Apply 只提升 `approvedVersion`，
+    回写消息继续绑定执行中的版本。
 
-### P1 — 验证反馈修复
+### P1
 
-- [ ] 真实任务验证（5～10 个）中发现的 Bug 修复
-- [ ] 已知候选：删除节点后的选择状态清理、空状态语言切换、快捷键与输入框冲突
+- [ ] **Bug Fix**（真实任务验证反馈；候选：孤立节点提示、删除后选择状态清理、空状态语言切换）
+- [ ] **Validation**（状态机迁移校验、executionVersion 锁校验、向后兼容 `.plan` 数据校验）
 
 ### 验收标准（v0.1.1 Release）
 
-- [ ] typecheck + build + verify（含新增用例）全绿
-- [ ] GUI probe 通过（标签注册、视图挂载、0 控制台错误）
-- [ ] 全新 profile 从 GitHub 安装 `v0.1.1` tag 验证通过
-- [ ] CHANGELOG / ROADMAP 更新，tag `v0.1.1`
+- typecheck + build + verify（含新增用例）全绿
+- GUI probe 通过（标签注册、视图挂载、0 控制台错误）
+- 全新 profile 从 GitHub 安装 `v0.1.1` tag 验证通过
+- CHANGELOG / ROADMAP 更新后 tag `v0.1.1`
 
-## v0.2 — 计划体验（规划中，按优先级排序）
+## v0.2 — Plan Intelligence（规划中）
 
-- [ ] ⭐ 自然语言修改计划（NL Plan Editing）—— v0.2 头号功能：
-  「把数据库迁移删除，API 和前端并行开发，测试放到最后」→ Canvas 自动变成对应的 DAG。
-- [ ] ⭐ 文件变更预览（File Change Preview）—— 节点展开显示变更意图：
-  `+ src/login.ts`、`~ src/auth.ts`、`- src/old-auth.ts`，让用户知道 Agent 准备动哪些文件。
-- [ ] AI Plan Review —— 只做结构性检查，不做「AI 复评」：
-  依赖 / 冗余 / 缺失 / 并行化 / 风险（Plan Health：✓ 无环、✓ 依赖有效、⚠ 冗余任务、⚠ 缺失测试、💡 可并行、🔴 高风险变更）。
-- [ ] 评论增强（回复、状态、@）
-- [ ] Focus Mode（v0.2.x，不阻塞主版本）：只显示当前节点 + 上游/下游，其他节点淡化。
+### P0
 
-## v0.3 — 执行可视化（规划中）
+- [ ] **NL Plan Editing** ⭐：「把数据库迁移删除，API 和前端并行开发，测试放到最后」
+  → 自动编辑 DAG，而不是手动拖线。
+- [ ] **Plan Diff Generation**：v0.1 已有结构化 diff；v0.2 增强可读性
+  （自然语言变更说明、按影响面分组）。
 
-- [ ] 执行可视化：Plan ↔ Execution 统一图——同一个节点既是 Plan 又是 Execution
-  （✓ Plan approved · 🟢 Running · Files: 3 · Tools: 7 · Duration: 02:13），不另做一套执行图。
-- [ ] 并行执行：DAG 已表达并行（A → B/C → D）；执行引擎按
-  `Visual Graph → Execution Planner → Dependency Resolution → Runnable Tasks → Agent` 识别互不依赖的节点。
-- [ ] Sub-agent 图
-- [ ] 动态重新规划（基于版本边界，不失控）
+### P1
 
-## v0.4 — 多 Agent（规划中）
+- [ ] **File Change Preview**：节点展开显示 `+ src/login.ts` / `~ src/auth.ts` / `- src/old-auth.ts`，
+  从「任务可视化」升级为「变更意图可视化」。
+- [ ] **AI Plan Review**：结构化 Plan Health
+  （依赖 / 冗余 / 缺失 / 并行化 / 风险），不做「AI 复评」。
+
+### P2
+
+- [ ] **Comment Enhancement**（回复 / 状态 / @）
+- [ ] **Focus Mode**（当前节点 + 上下游，其他淡化；v0.2.x 可提前，不阻塞主版本）
+
+## v0.3 — Execution Intelligence（规划中）
+
+- [ ] Execution Status（实时节点状态）
+- [ ] Plan / Execution Unified Graph（同一节点既是 Plan 又是 Execution，不另做一套执行图）
+- [ ] Parallel Task Execution（`Visual Graph → Execution Planner → Dependency Resolution → Runnable Tasks → Agent`）
+- [ ] Sub-agent Tree
+- [ ] Dynamic Replanning（基于版本边界，不失控）
+
+## v0.4 — Agent Protocol（规划中）
 
 - [ ] Generic Agent Protocol 先行：VisualPlan 作为不同 Agent 之间的统一计划交换格式
-- [ ] DSH / Claude / Codex / Gemini 适配器（接入统一协议）
+- [ ] Claude Adapter / Codex Adapter / Gemini Adapter（接入统一协议）
 
-## v1.0 — 长期方向
+## v1.0 — Agent Workflow IDE
 
-- [ ] Agent Workflow IDE
-- [ ] Multi-agent
-- [ ] Advanced Re-planning
-- [ ] Ecosystem
+- [ ] Agent Workflow IDE / Multi-agent / Advanced Re-planning / Ecosystem
 
 ## 当前阶段：产品验证（先于一切新功能）
 
@@ -138,9 +103,27 @@ v0.1 作为产品验证版本，**不再堆功能**。先用 5～10 个真实复
 | 执行后 Plan 失控 | Snapshot / Version Lock |
 | 节点太多看不懂 | Focus Mode |
 
+## 核心风险（技术重点）
+
+1. **Plan 生命周期管理**：状态机必须显式、可校验、可追溯。
+2. **版本与执行绑定**：`approvedVersion` / `executionVersion` 锁语义，执行永远绑定批准版本。
+3. **Agent 修改计划权限控制**：Agent 不得静默修改已批准计划；变更必须先提出、经用户批准。
+
+## 开发约束（所有 Phase 必须遵守）
+
+1. 不改变现有 DSH Plan Mode 行为。
+2. 所有新增功能必须向后兼容已有 `.plan` 数据。
+3. 不允许为了未来功能提前引入复杂架构。
+4. 优先保证数据一致性，再优化 UI。
+5. 每完成一个 Phase 必须提供：
+   - 修改文件列表
+   - 数据结构变化
+   - 测试结果
+   - 已知问题
+
 ## 第一版明确不做
 
-以下内容不进入 v0.1，避免为「以后可能需要」提前实现：
+以下内容不进入 v0.1 / v0.1.1，避免为「以后可能需要」提前实现：
 
 - 多 Agent / 多人实时协作
 - Claude / Codex / Gemini 支持
@@ -149,4 +132,4 @@ v0.1 作为产品验证版本，**不再堆功能**。先用 5～10 个真实复
 - 实时 Token / Reasoning 可视化
 - 复杂评论系统 / Figma 风格协作
 - 工作流市场 / 插件市场
-- 快捷键（推迟到 v0.1.1，不阻塞 v0.1 发布）
+- 快捷键（推迟到 v0.1.1）
