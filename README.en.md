@@ -28,8 +28,9 @@ User request → DSH Plan Mode → structured VisualPlan JSON → node-graph can
 - **Plan Diff**: shows added / removed / modified / dependency changes before commit; nothing is written without confirmation.
 - **Versioned storage**: every Apply creates an immutable new version (`.plan/revisions/vN.json`);
   the user-approved plan is never overwritten.
-- **Reliable write-back**: the approved revision is handed to the agent with an explicit message, and the agent continues from it.
+- **Reliable write-back**: the **approved version (Plan vN)** is handed to the agent with an explicit message, and the agent continues from that exact version; if the situation changes during execution, the agent must propose a new plan for approval instead of silently modifying the approved one.
 - **Dual data formats**: `plan.json` (machine interface) + `plan.md` (human / agent-readable, Git-friendly, debuggable).
+- **Plan ↔ Agent boundary**: `plan.status / version / approvedVersion / executionVersion` — execution is bound to the approved version, laying the foundation for dynamic re-planning.
 - **Robustness**: JSON validation, missing-dependency and circular-dependency detection;
   falls back to the Markdown plan when parsing fails.
 - **Canvas capabilities**: theme (follow / day / night), minimap toggle, fullscreen, interactivity toggle,
@@ -118,13 +119,30 @@ Each approved plan is stored in the session workspace:
     └── v2.json
 ```
 
+## Version & execution boundary
+
+Every Apply records the new version as both `approvedVersion` and `executionVersion`:
+
+```text
+Plan v1 (agent-generated)  reviewing     approvedVersion = null   executionVersion = null
+        │ user applies
+        ▼
+Plan v2 (user-approved)    executing     approvedVersion = 2      executionVersion = 2
+        │ later draft v3
+        ▼
+Plan v3 (new draft)        draft         approvedVersion = 2      executionVersion = 2
+```
+
+Execution is always bound to the approved version; a newer draft never silently
+replaces the version that is currently being executed.
+
 ## Development
 
 ```sh
 npm install
 npm run typecheck   # host + client type checks
 npm run build       # host + client build
-npm run verify      # offline contract + pure-logic verification (66 checks)
+npm run verify      # offline contract + pure-logic verification (77 checks)
 ```
 
 ## E2E
