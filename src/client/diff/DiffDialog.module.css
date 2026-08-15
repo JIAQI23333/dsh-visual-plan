@@ -39,6 +39,15 @@
   color: var(--vp-text-tertiary);
 }
 
+.note {
+  padding: 8px 12px;
+  background: color-mix(in srgb, var(--vp-warn) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--vp-warn) 35%, transparent);
+  color: var(--vp-warn);
+  border-radius: 8px;
+  line-height: 1.5;
+}
+
 .section {
   display: flex;
   flex-direction: column;

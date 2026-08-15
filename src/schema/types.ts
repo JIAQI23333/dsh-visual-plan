@@ -136,6 +136,7 @@ export interface PlanIssue {
     | 'invalid-edge'
     | 'circular-dependency'
     | 'invalid-version-bound'
+    | 'status-version-inconsistency'
     | 'empty-plan'
   message: string
   /** Task id the issue belongs to, when scoped. */

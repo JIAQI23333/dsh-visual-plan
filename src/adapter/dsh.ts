@@ -177,7 +177,9 @@ export function resolveAdapter(ctx: PlanAdapterContext): PlanAdapter | null {
  */
 export function buildRevisedPlanMessage(plan: VisualPlan, diff: PlanDiff): string {
   const summary = formatDiff(diff)
-  const bound = plan.approvedVersion ?? plan.version
+  // The version actually being executed wins: with the execution lock, a
+  // later approval (v5) must never re-bind an in-flight execution (v4).
+  const bound = plan.executionVersion ?? plan.approvedVersion ?? plan.version
   return [
     'The user modified the current execution plan.',
     '',

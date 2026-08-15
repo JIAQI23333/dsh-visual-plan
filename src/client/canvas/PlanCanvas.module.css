@@ -153,6 +153,11 @@ body[data-ds-dark-theme] .root:not([data-theme]) {
   border-color: color-mix(in srgb, var(--vp-ok) 45%, transparent);
 }
 
+.badgeExecuting {
+  color: var(--vp-info);
+  border-color: color-mix(in srgb, var(--vp-info) 45%, transparent);
+}
+
 .planStatusreviewing {
   color: var(--vp-warn);
 }

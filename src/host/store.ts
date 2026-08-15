@@ -6,6 +6,7 @@
  *   <workspace>/.plan/plan.json          latest VisualPlan
  *   <workspace>/.plan/plan.md            latest markdown
  *   <workspace>/.plan/revisions/vN.json  immutable PlanVersion snapshots
+ *   <workspace>/.plan/execution.json     write-once execution snapshot
  */
 
 import { mkdir, readFile, readdir, rename, unlink, writeFile } from 'node:fs/promises'
@@ -35,9 +36,60 @@ export function revisionsDir(cwd: string): string {
   return join(planDir(cwd), 'revisions')
 }
 
+/** Write-once execution snapshot bound to an approved revision. */
+export interface ExecutionRecord {
+  planId: string
+  executionVersion: number
+  /** Relative path (from `.plan/`) of the immutable revision being executed. */
+  revision: string
+  startedAt: number
+  status: 'running' | 'completed' | 'failed'
+}
+
+export function executionFile(cwd: string): string {
+  return join(planDir(cwd), 'execution.json')
+}
+
+/**
+ * Persist the execution snapshot for a plan. Write-once per execution
+ * version: once a version's record exists, it is never overwritten, so a
+ * later approval/draft cannot mutate the snapshot of an in-flight execution.
+ */
+export async function saveExecution(cwd: string, plan: VisualPlan): Promise<ExecutionRecord> {
+  if (plan.executionVersion === null) throw new Error('executionVersion is not set')
+  const record: ExecutionRecord = {
+    planId: plan.id,
+    executionVersion: plan.executionVersion,
+    revision: `revisions/v${plan.executionVersion}.json`,
+    startedAt: Date.now(),
+    status: 'running',
+  }
+  const file = executionFile(cwd)
+  try {
+    const existing = JSON.parse(await readFile(file, 'utf8')) as ExecutionRecord
+    if (existing.executionVersion === record.executionVersion) return existing
+  } catch {
+    // No snapshot yet — write it.
+  }
+  await atomicWrite(file, JSON.stringify(record, null, 2))
+  return record
+}
+
+/** Read the current execution snapshot (null when none exists). */
+export async function readExecution(cwd: string): Promise<ExecutionRecord | null> {
+  try {
+    const parsed = JSON.parse(await readFile(executionFile(cwd), 'utf8')) as ExecutionRecord
+    if (typeof parsed.executionVersion !== 'number' || typeof parsed.revision !== 'string') return null
+    return parsed
+  } catch {
+    return null
+  }
+}
+
 /**
  * Persist an approved plan: append a version snapshot and refresh plan.json +
- * plan.md. Returns the created version.
+ * plan.md; when the plan carries an execution version, also persist the
+ * write-once execution snapshot. Returns the created version.
  */
 export async function saveRevision(
   cwd: string,
@@ -53,6 +105,7 @@ export async function saveRevision(
   await atomicWrite(join(revDir, `v${version.version}.json`), JSON.stringify(version, null, 2))
   await atomicWrite(join(planDir(cwd), 'plan.json'), JSON.stringify(plan, null, 2))
   await atomicWrite(join(planDir(cwd), 'plan.md'), serializePlanMarkdown(plan))
+  if (plan.executionVersion !== null) await saveExecution(cwd, plan)
   return version
 }
 

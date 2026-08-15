@@ -22,6 +22,7 @@ import {
   type Connection,
   type Edge,
   type NodeChange,
+  type ReactFlowInstance,
 } from '@xyflow/react'
 import type { PlanDiff, VisualPlan } from '../../schema/types.ts'
 import { buildRevisedPlanMessage } from '../../adapter/dsh.ts'
@@ -85,6 +86,7 @@ export function PlanCanvas(props: PlanCanvasProps): JSX.Element {
   const [interactive, setInteractive] = useState<boolean>(() => readPref<boolean>(INTERACTIVE_KEY, true))
   const [fullscreen, setFullscreen] = useState(false)
   const dragPositions = useRef<PlanPositions>({})
+  const rfRef = useRef<ReactFlowInstance<PlanFlowNodeType, Edge> | null>(null)
 
   useEffect(() => writePref(THEME_KEY, theme), [theme])
   useEffect(() => writePref(MINIMAP_KEY, showMinimap), [showMinimap])
@@ -188,27 +190,66 @@ export function PlanCanvas(props: PlanCanvasProps): JSX.Element {
     setConfirmDelete(false)
   }
 
-  const confirmApply = async (): Promise<void> => {
-    if (!inputActions) {
-      setSubmitError(t('diff.submitting'))
-      return
+  // Keyboard shortcuts (v0.1.1). Ignored while typing in inputs; never
+  // steals browser-native undo/redo or save.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent): void => {
+      const target = event.target as HTMLElement | null
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return
+      const mod = event.metaKey || event.ctrlKey
+      if (mod && event.key.toLowerCase() === 'z') {
+        event.preventDefault()
+        dispatch({ type: event.shiftKey ? 'redo' : 'undo' })
+        return
+      }
+      if (mod && event.key.toLowerCase() === 's') {
+        event.preventDefault()
+        if (state.dirty) setDiffOpen(true)
+        return
+      }
+      if (!mod && (event.key === 'Delete' || event.key === 'Backspace')) {
+        if (selectedId !== null) {
+          event.preventDefault()
+          handleDelete()
+        }
+        return
+      }
+      if (!mod && event.key.toLowerCase() === 'f') {
+        event.preventDefault()
+        rfRef.current?.fitView({ padding: 0.2 })
+      }
     }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [selectedId, state.dirty, dispatch, handleDelete])
+
+  const confirmApply = async (): Promise<void> => {
     const diff = diffPlans(state.base, state.current)
     setSubmitting(true)
     setSubmitError(null)
     try {
       const nextVersion = state.base.version + 1
+      // Execution Version Lock: while a version is executing, an approval
+      // only bumps approvedVersion; the in-flight execution keeps its bound.
+      const locked = state.base.executionVersion !== null
       const approved: VisualPlan = {
         ...state.current,
         version: nextVersion,
         status: 'executing',
         approvedVersion: nextVersion,
-        executionVersion: nextVersion,
+        executionVersion: state.base.executionVersion ?? nextVersion,
       }
       await savePlanToHost(sessionId, approved, diff, 'user')
-      const message = buildRevisedPlanMessage(approved, diff)
-      inputActions.setDraft(message)
-      inputActions.submit()
+      if (!locked) {
+        if (!inputActions) {
+          setSubmitError(t('diff.submitting'))
+          setSubmitting(false)
+          return
+        }
+        const message = buildRevisedPlanMessage(approved, diff)
+        inputActions.setDraft(message)
+        inputActions.submit()
+      }
       dispatch({ type: 'applied' })
       setDiffOpen(false)
     } catch (error) {
@@ -231,6 +272,11 @@ export function PlanCanvas(props: PlanCanvasProps): JSX.Element {
               {t('toolbar.approved')} v{plan.approvedVersion}
             </span>
           )}
+          {plan.executionVersion != null && plan.executionVersion !== plan.approvedVersion && (
+            <span className={`${styles.badge} ${styles.badgeExecuting}`}>
+              {t('planStatus.executing')} v{plan.executionVersion}
+            </span>
+          )}
           <span className={`${styles.badge} ${styles[`planStatus${plan.status}`]}`}>{t(`planStatus.${plan.status}`)}</span>
           {state.dirty && <span className={`${styles.badge} ${styles.badgeDirty}`}>{t('toolbar.edited')}</span>}
         </div>
@@ -240,6 +286,15 @@ export function PlanCanvas(props: PlanCanvasProps): JSX.Element {
           </button>
           <button type="button" className={styles.action} onClick={() => setPositions(layoutPlan(plan))}>
             {t('toolbar.autoLayout')}
+          </button>
+          <button type="button" className={styles.action} title={t('toolbar.fitViewHint')} onClick={() => rfRef.current?.fitView({ padding: 0.2 })}>
+            {t('toolbar.fitView')}
+          </button>
+          <button type="button" className={styles.action} disabled={state.past.length === 0} title={t('toolbar.undoHint')} onClick={() => dispatch({ type: 'undo' })}>
+            {t('toolbar.undo')}
+          </button>
+          <button type="button" className={styles.action} disabled={state.future.length === 0} title={t('toolbar.redoHint')} onClick={() => dispatch({ type: 'redo' })}>
+            {t('toolbar.redo')}
           </button>
           <button type="button" className={styles.action} disabled={!state.dirty} onClick={() => dispatch({ type: 'discard' })}>
             {t('toolbar.discard')}
@@ -301,6 +356,7 @@ export function PlanCanvas(props: PlanCanvasProps): JSX.Element {
             nodes={nodes}
             edges={edges}
             nodeTypes={{ plan: PlanFlowNode }}
+            onInit={(instance) => { rfRef.current = instance }}
             onNodesChange={onNodesChange}
             onConnect={onConnect}
             onEdgesDelete={onEdgesDelete}
@@ -375,6 +431,9 @@ export function PlanCanvas(props: PlanCanvasProps): JSX.Element {
         t={t}
         submitting={submitting}
         error={submitError}
+        note={state.base.executionVersion !== null
+          ? t('diff.lockedNote', { executing: String(state.base.executionVersion), next: String(state.base.version + 1) })
+          : null}
         onCancel={() => { if (!submitting) setDiffOpen(false) }}
         onConfirm={confirmApply}
       />

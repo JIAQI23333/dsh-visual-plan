@@ -8,15 +8,23 @@
  */
 
 import { deriveEdges } from '../engine/markdown.ts'
-import { diffPlans } from '../engine/diff.ts'
+import { diffPlans, isDiffEmpty } from '../engine/diff.ts'
 import { hasCycle } from '../schema/validate.ts'
+import { canTransitionPlan } from '../schema/state.ts'
 import type { PlanComment, PlanDiff, PlanTask, VisualPlan } from '../schema/types.ts'
+
+/** Undo/redo history depth cap (v0.1.1). */
+export const HISTORY_LIMIT = 100
 
 export interface PlanEditorState {
   /** The last approved plan (extracted or submitted). */
   base: VisualPlan
   /** The working copy under edit. */
   current: VisualPlan
+  /** Previous working copies, newest last; capped at HISTORY_LIMIT. */
+  past: VisualPlan[]
+  /** Undone working copies, oldest first (for redo). */
+  future: VisualPlan[]
   /** True while the working copy differs from base. */
   dirty: boolean
   /** Last reducer rejection, as a stable i18n key + params. */
@@ -33,6 +41,8 @@ export type PlanAction =
   | { type: 'reset'; plan: VisualPlan }
   | { type: 'discard' }
   | { type: 'applied' }
+  | { type: 'undo' }
+  | { type: 'redo' }
   | { type: 'editTask'; taskId: string; patch: Partial<Omit<PlanTask, 'id'>> }
   | { type: 'addTask'; task: Omit<PlanTask, 'id'> & { id?: string } }
   | { type: 'deleteTask'; taskId: string }
@@ -42,7 +52,7 @@ export type PlanAction =
   | { type: 'removeComment'; commentId: string }
 
 export function createEditorState(plan: VisualPlan): PlanEditorState {
-  return { base: plan, current: plan, dirty: false, error: null }
+  return { base: plan, current: plan, past: [], future: [], dirty: false, error: null }
 }
 
 function clonePlan(plan: VisualPlan): VisualPlan {
@@ -65,25 +75,64 @@ function nextCommentId(comments: readonly PlanComment[]): string {
   return `comment_${String(max + 1).padStart(3, '0')}`
 }
 
+/**
+ * Record a mutation: push the pre-mutation working copy into the undo stack
+ * and drop the redo stack.
+ */
+function pushHistory(prev: PlanEditorState, next: PlanEditorState): PlanEditorState {
+  return { ...next, past: [...prev.past, clonePlan(prev.current)].slice(-HISTORY_LIMIT), future: [] }
+}
+
 export function planReducer(state: PlanEditorState, action: PlanAction): PlanEditorState {
   switch (action.type) {
     case 'reset':
       return createEditorState(action.plan)
 
     case 'discard':
-      return { ...state, current: clonePlan(state.base), dirty: false, error: null }
+      return { ...state, current: clonePlan(state.base), past: [], future: [], dirty: false, error: null }
 
     case 'applied': {
       // Approving a revision bumps the version and moves the plan into
       // execution (v1 → v2 → v3 …, per the versioning contract). The new
       // version is simultaneously the approved version and the version bound
       // to execution: a later draft must never silently replace it.
+      if (state.base.status !== 'executing' && !canTransitionPlan(state.base.status, 'executing')) return state
       const next = clonePlan(state.current)
       next.version = state.base.version + 1
       next.status = 'executing'
       next.approvedVersion = next.version
-      next.executionVersion = next.version
-      return { ...state, base: next, current: next, dirty: false, error: null }
+      // Execution Version Lock: once bound, executionVersion is write-once.
+      // A later approval (v5) while v4 is executing only bumps approvedVersion.
+      next.executionVersion = state.base.executionVersion ?? next.version
+      return { ...state, base: next, current: next, past: [], future: [], dirty: false, error: null }
+    }
+
+    case 'undo': {
+      if (state.past.length === 0) return state
+      const previous = state.past[state.past.length - 1]!
+      const current = clonePlan(previous)
+      return {
+        ...state,
+        current,
+        past: state.past.slice(0, -1),
+        future: [clonePlan(state.current), ...state.future],
+        dirty: !isDiffEmpty(diffPlans(state.base, current)),
+        error: null,
+      }
+    }
+
+    case 'redo': {
+      if (state.future.length === 0) return state
+      const next = state.future[0]!
+      const current = clonePlan(next)
+      return {
+        ...state,
+        current,
+        past: [...state.past, clonePlan(state.current)].slice(-HISTORY_LIMIT),
+        future: state.future.slice(1),
+        dirty: !isDiffEmpty(diffPlans(state.base, current)),
+        error: null,
+      }
     }
 
     case 'editTask': {
@@ -92,7 +141,7 @@ export function planReducer(state: PlanEditorState, action: PlanAction): PlanEdi
       if (!task) return { ...state, error: { code: 'taskNotFound', params: { id: action.taskId } } }
       Object.assign(task, action.patch)
       current.edges = deriveEdges(current.tasks)
-      return { ...state, current, dirty: true, error: null }
+      return pushHistory(state, { ...state, current, dirty: true, error: null })
     }
 
     case 'addTask': {
@@ -110,7 +159,7 @@ export function planReducer(state: PlanEditorState, action: PlanAction): PlanEdi
         metadata: action.task.metadata ?? {},
       })
       current.edges = deriveEdges(current.tasks)
-      return { ...state, current, dirty: true, error: null }
+      return pushHistory(state, { ...state, current, dirty: true, error: null })
     }
 
     case 'deleteTask': {
@@ -126,7 +175,7 @@ export function planReducer(state: PlanEditorState, action: PlanAction): PlanEdi
         }))
       current.comments = current.comments.filter((c) => c.taskId !== action.taskId)
       current.edges = deriveEdges(current.tasks)
-      return { ...state, current, dirty: true, error: null }
+      return pushHistory(state, { ...state, current, dirty: true, error: null })
     }
 
     case 'addDependency': {
@@ -142,7 +191,7 @@ export function planReducer(state: PlanEditorState, action: PlanAction): PlanEdi
       if (hasCycle(current)) {
         return { ...state, error: { code: 'circular' } }
       }
-      return { ...state, current, dirty: true, error: null }
+      return pushHistory(state, { ...state, current, dirty: true, error: null })
     }
 
     case 'removeDependency': {
@@ -151,7 +200,7 @@ export function planReducer(state: PlanEditorState, action: PlanAction): PlanEdi
       if (!task) return state
       task.dependencies = task.dependencies.filter((d) => d !== action.dependencyId)
       current.edges = deriveEdges(current.tasks)
-      return { ...state, current, dirty: true, error: null }
+      return pushHistory(state, { ...state, current, dirty: true, error: null })
     }
 
     case 'addComment': {
@@ -166,7 +215,7 @@ export function planReducer(state: PlanEditorState, action: PlanAction): PlanEdi
         author: action.author,
         createdAt: Date.now(),
       })
-      return { ...state, current, dirty: true, error: null }
+      return pushHistory(state, { ...state, current, dirty: true, error: null })
     }
 
     case 'removeComment': {
@@ -174,7 +223,7 @@ export function planReducer(state: PlanEditorState, action: PlanAction): PlanEdi
       const before = current.comments.length
       current.comments = current.comments.filter((c) => c.id !== action.commentId)
       if (current.comments.length === before) return state
-      return { ...state, current, dirty: true, error: null }
+      return pushHistory(state, { ...state, current, dirty: true, error: null })
     }
   }
 }

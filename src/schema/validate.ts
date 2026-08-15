@@ -121,6 +121,32 @@ export function validatePlan(input: unknown, options: { repair?: boolean } = {})
     })
     executionVersion = null
   }
+  // Execution must never point past the approved version: executing a plan
+  // that was not approved would violate the Human Control Layer contract.
+  if (approvedVersion !== null && executionVersion !== null && executionVersion > approvedVersion) {
+    issues.push({
+      level: 'warning',
+      code: 'invalid-version-bound',
+      message: `"executionVersion" (${executionVersion}) cannot exceed "approvedVersion" (${approvedVersion}); reset to null.`,
+    })
+    executionVersion = null
+  }
+  // Consistency between status and version bounds (warnings only, so older
+  // `.plan/` files keep loading unchanged).
+  if (status === 'executing' && approvedVersion === null) {
+    issues.push({
+      level: 'warning',
+      code: 'status-version-inconsistency',
+      message: 'Plan status is "executing" but approvedVersion is not set.',
+    })
+  }
+  if ((status === 'completed' || status === 'failed') && executionVersion === null) {
+    issues.push({
+      level: 'warning',
+      code: 'status-version-inconsistency',
+      message: `Plan status is "${status}" but executionVersion is not set.`,
+    })
+  }
   const metadata = isRecord(input.metadata) ? input.metadata : {}
 
   if (id === '') issues.push({ level: 'error', code: 'missing-field', message: 'Plan is missing "id".' })

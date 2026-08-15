@@ -16,6 +16,7 @@ interface DiffDialogProps {
   t: VisualPlanT
   submitting: boolean
   error: string | null
+  note?: string | null
   onCancel: () => void
   onConfirm: () => void
 }
@@ -25,7 +26,7 @@ function name(id: string, titleById: ReadonlyMap<string, string>): string {
 }
 
 export function DiffDialog(props: DiffDialogProps): JSX.Element | null {
-  const { open, diff, titleById, t, submitting, error, onCancel, onConfirm } = props
+  const { open, diff, titleById, t, submitting, error, note, onCancel, onConfirm } = props
   if (!open) return null
 
   const hasChanges = diff.added.length > 0 || diff.removed.length > 0 || diff.modified.length > 0
@@ -37,6 +38,7 @@ export function DiffDialog(props: DiffDialogProps): JSX.Element | null {
         <div className={styles.heading}>{t('diff.title')}</div>
         <div className={styles.scroll}>
           {!hasChanges && <div className={styles.none}>{t('diff.noChanges')}</div>}
+          {note && <div className={styles.note}>{note}</div>}
 
           {diff.removed.length > 0 && (
             <section className={styles.section}>

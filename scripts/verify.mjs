@@ -96,9 +96,10 @@ const { parsePlanMarkdown, serializePlanMarkdown, deriveEdges } = await import('
 const { diffPlans, isDiffEmpty } = await import('../lib/engine/diff.js')
 const { createPlanVersion } = await import('../lib/engine/revision.js')
 const { validatePlan, hasCycle } = await import('../lib/schema/validate.js')
+const { canTransitionPlan } = await import('../lib/schema/state.js')
 const { deepseekHarnessAdapter, buildRevisedPlanMessage, parsePlanArgs, extractPlanMarkdowns } = await import('../lib/adapter/dsh.js')
 const { planReducer, createEditorState } = await import('../lib/client/state.js')
-const { saveRevision, readStoredPlan, readRevisionMetas } = await import('../lib/host/store.js')
+const { saveRevision, readStoredPlan, readRevisionMetas, readExecution } = await import('../lib/host/store.js')
 const { visualPlanEn, visualPlanZh } = await import('../lib/client/i18n.js')
 
 // --- i18n ---
@@ -195,6 +196,24 @@ overBound.approvedVersion = 5
 const overIssues = validatePlan(overBound, { repair: true })
 check('approvedVersion above current version is repaired', overIssues.plan?.approvedVersion === null, String(overIssues.plan?.approvedVersion))
 
+// --- Plan state machine ---
+check('reviewing → executing is a legal transition', canTransitionPlan('reviewing', 'executing'))
+check('executing → completed is a legal transition', canTransitionPlan('executing', 'completed'))
+check('executing → draft is rejected', !canTransitionPlan('executing', 'draft'))
+check('completed is a terminal state', !canTransitionPlan('completed', 'reviewing'))
+
+const noApproval = JSON.parse(JSON.stringify(plan))
+noApproval.status = 'executing'
+const noApprovalIssues = validatePlan(noApproval, { repair: false })
+check('executing without approvedVersion warns', noApprovalIssues.issues.some((i) => i.code === 'status-version-inconsistency'), JSON.stringify(noApprovalIssues.issues))
+
+const execOver = JSON.parse(JSON.stringify(plan))
+execOver.version = 3
+execOver.approvedVersion = 1
+execOver.executionVersion = 2
+const execOverIssues = validatePlan(execOver, { repair: true })
+check('executionVersion above approvedVersion is repaired', execOverIssues.plan?.executionVersion === null && execOverIssues.plan?.approvedVersion === 1, JSON.stringify(execOverIssues.plan))
+
 // --- Diff ---
 const edited = JSON.parse(JSON.stringify(plan))
 edited.tasks[2].title = '实现登录 API v2'
@@ -248,6 +267,29 @@ check('applied moves status to executing', applier.base.status === 'executing', 
 check('applied binds approved version to v2', applier.base.approvedVersion === 2, String(applier.base.approvedVersion))
 check('applied binds execution to v2', applier.base.executionVersion === 2, String(applier.base.executionVersion))
 
+// Execution Version Lock: a second approval while v2 is executing must keep
+// execution bound to v2 and only bump the approved version to v3.
+let lockEditor = createEditorState(plan)
+lockEditor = planReducer(lockEditor, { type: 'addTask', task: { title: '新增步骤', description: '', type: 'other', status: 'pending', dependencies: [], metadata: {} } })
+lockEditor = planReducer(lockEditor, { type: 'applied' })
+lockEditor = planReducer(lockEditor, { type: 'addTask', task: { title: '再增一步', description: '', type: 'other', status: 'pending', dependencies: [], metadata: {} } })
+lockEditor = planReducer(lockEditor, { type: 'applied' })
+check('second apply keeps execution locked at v2', lockEditor.base.version === 3 && lockEditor.base.approvedVersion === 3 && lockEditor.base.executionVersion === 2, JSON.stringify({ v: lockEditor.base.version, a: lockEditor.base.approvedVersion, e: lockEditor.base.executionVersion }))
+
+// Undo / Redo
+let hist = createEditorState(plan)
+hist = planReducer(hist, { type: 'addTask', task: { title: 'U1', description: '', type: 'other', status: 'pending', dependencies: [], metadata: {} } })
+hist = planReducer(hist, { type: 'editTask', taskId: hist.current.tasks.at(-1)?.id ?? '', patch: { title: 'U2' } })
+check('mutations accumulate undo history', hist.past.length === 2, String(hist.past.length))
+hist = planReducer(hist, { type: 'undo' })
+check('undo restores the previous working copy', hist.current.tasks.at(-1)?.title === 'U1', String(hist.current.tasks.at(-1)?.title))
+hist = planReducer(hist, { type: 'undo' })
+check('undo returns to the original plan', hist.dirty === false && hist.current.tasks.length === plan.tasks.length, `dirty=${hist.dirty}`)
+hist = planReducer(hist, { type: 'redo' })
+check('redo reapplies the edit', hist.current.tasks.at(-1)?.title === 'U1', String(hist.current.tasks.at(-1)?.title))
+hist = planReducer(hist, { type: 'discard' })
+check('discard clears undo/redo history', hist.past.length === 0 && hist.future.length === 0, JSON.stringify({ p: hist.past.length, f: hist.future.length }))
+
 // --- Write-back message ---
 const approved = { ...edited, version: 2, status: 'executing', approvedVersion: 2, executionVersion: 2 }
 const message = buildRevisedPlanMessage(approved, diff)
@@ -256,6 +298,9 @@ check('write-back message binds the approved version', message.includes('Plan v2
 check('write-back message forbids silent plan modification', message.includes('do not silently modify the approved plan'))
 check('write-back message embeds full revised markdown', message.includes('# 实现用户登录功能') && message.includes('添加认证测试'))
 check('write-back message lists changes', message.includes('REMOVED') && message.includes('ADDED') && message.includes('MODIFIED'))
+const lockedApproved = { ...edited, version: 3, status: 'executing', approvedVersion: 3, executionVersion: 2 }
+const lockedMessage = buildRevisedPlanMessage(lockedApproved, diff)
+check('write-back binds the executing version under lock', lockedMessage.includes('Plan v2') && !lockedMessage.includes('Plan v3'), lockedMessage.slice(0, 200))
 
 // 4/4 host persistence (temp-dir round trip)
 console.log('4/4 host persistence')
@@ -279,6 +324,18 @@ try {
   const storedV2 = await readStoredPlan(scratch)
   check('stored plan.json is now v2 content', storedV2?.tasks.some((t) => t.title === '添加认证测试'))
   check('stored v2 keeps approved/execution version bounds', storedV2?.approvedVersion === 2 && storedV2?.executionVersion === 2, JSON.stringify(storedV2))
+
+  const execRecord = await readExecution(scratch)
+  check('execution.json snapshots the bound version', execRecord?.executionVersion === 2 && execRecord?.revision === 'revisions/v2.json', JSON.stringify(execRecord))
+  check('execution.json lives in .plan/', (await readdir(join(scratch, '.plan'))).includes('execution.json'), JSON.stringify(await readdir(join(scratch, '.plan'))))
+  const execStartedAt = execRecord?.startedAt
+  const v3 = JSON.parse(JSON.stringify(approved))
+  v3.version = 3
+  v3.approvedVersion = 3
+  v3.tasks = [...v3.tasks, { id: 'task_009', title: '锁测试', description: '', type: 'other', status: 'pending', dependencies: [], metadata: {} }]
+  await saveRevision(scratch, v3, { added: [], removed: [], modified: [], dependencyChanges: [], commentChanges: [] }, 'user')
+  const execAfter = await readExecution(scratch)
+  check('execution snapshot is write-once', execAfter?.executionVersion === 2 && execAfter?.startedAt === execStartedAt, JSON.stringify(execAfter))
 } finally {
   await import('node:fs/promises').then(({ rm }) => rm(scratch, { recursive: true, force: true }))
 }
