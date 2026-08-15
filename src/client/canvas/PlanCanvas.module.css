@@ -38,28 +38,31 @@ body[data-ds-dark-theme] .root:not([data-theme]) {
 }
 
 .root[data-theme='day'] {
-  --vp-canvas: #f4f6f9;
+  /* Mirrors the real DSH light tokens (same values the follow mode reads),
+     so an explicit "day" theme looks identical to a light app — pure white
+     canvas and near-black text, not a grayish approximation. */
+  --vp-canvas: #ffffff;
   --vp-surface-card: #ffffff;
-  --vp-surface-raised: #f0f2f5;
+  --vp-surface-raised: #f7f8fa;
   --vp-surface-input: #ffffff;
-  --vp-border: #d4d9e0;
-  --vp-text-primary: #1c2430;
-  --vp-text-secondary: #5a6472;
-  --vp-text-tertiary: #8a93a3;
-  --vp-accent: #2563eb;
-  --vp-accent-hover: #1d4ed8;
-  --vp-hover: rgba(0, 0, 0, 0.05);
-  --vp-grid: rgba(0, 0, 0, 0.09);
-  --vp-edge: #9aa3b2;
-  --vp-minimap-bg: rgba(255, 255, 255, 0.92);
-  --vp-minimap-node: #2563eb;
-  --vp-minimap-stroke: #cbd5e1;
-  --vp-minimap-mask: rgba(255, 255, 255, 0.65);
+  --vp-border: rgba(0, 0, 0, 0.1);
+  --vp-text-primary: #0f1115;
+  --vp-text-secondary: #61666b;
+  --vp-text-tertiary: #81858c;
+  --vp-accent: #4176e6;
+  --vp-accent-hover: #679efe;
+  --vp-hover: rgba(38, 49, 72, 0.06);
+  --vp-grid: rgba(15, 17, 21, 0.1);
+  --vp-edge: rgba(129, 133, 140, 0.6);
+  --vp-minimap-bg: #ffffff;
+  --vp-minimap-node: #4176e6;
+  --vp-minimap-stroke: rgba(0, 0, 0, 0.1);
+  --vp-minimap-mask: rgba(255, 255, 255, 0.55);
   --vp-warn: #b45309;
   --vp-ok: #15803d;
-  --vp-info: #1d4ed8;
+  --vp-info: #2563eb;
   --vp-danger: #dc2626;
-  --vp-overlay: rgba(0, 0, 0, 0.35);
+  --vp-overlay: rgba(0, 0, 0, 0.24);
 }
 
 .root[data-theme='night'] {
@@ -231,6 +234,91 @@ body[data-ds-dark-theme] .root:not([data-theme]) {
 
 .actionPrimary:hover:not(:disabled) {
   background: var(--vp-accent-hover);
+}
+
+.moreWrap {
+  position: relative;
+}
+
+.menuBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: default;
+}
+
+.moreMenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 31;
+  min-width: 224px;
+  background: var(--vp-surface-card);
+  border: 1px solid var(--vp-border);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.moreGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.moreGroup + .moreGroup {
+  border-top: 1px solid var(--vp-border);
+  margin-top: 4px;
+  padding-top: 4px;
+}
+
+.moreGroupTitle {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--vp-text-tertiary);
+  padding: 4px 10px 2px;
+}
+
+.moreItem {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  text-align: left;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--vp-text-primary);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.moreItem:hover {
+  background: var(--vp-hover);
+}
+
+.moreItemActive {
+  color: var(--vp-accent);
+}
+
+.moreThemeRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: var(--vp-text-primary);
 }
 
 .selectWrap {

@@ -85,6 +85,7 @@ export function PlanCanvas(props: PlanCanvasProps): JSX.Element {
   const [showMinimap, setShowMinimap] = useState<boolean>(() => readPref<boolean>(MINIMAP_KEY, true))
   const [interactive, setInteractive] = useState<boolean>(() => readPref<boolean>(INTERACTIVE_KEY, true))
   const [fullscreen, setFullscreen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const dragPositions = useRef<PlanPositions>({})
   const rfRef = useRef<ReactFlowInstance<PlanFlowNodeType, Edge> | null>(null)
 
@@ -207,6 +208,10 @@ export function PlanCanvas(props: PlanCanvasProps): JSX.Element {
         if (state.dirty) setDiffOpen(true)
         return
       }
+      if (event.key === 'Escape') {
+        setMenuOpen(false)
+        return
+      }
       if (!mod && (event.key === 'Delete' || event.key === 'Backspace')) {
         if (selectedId !== null) {
           event.preventDefault()
@@ -284,12 +289,6 @@ export function PlanCanvas(props: PlanCanvasProps): JSX.Element {
           <button type="button" className={styles.action} onClick={() => { setSelectedId(null); setPanelMode('new'); setConfirmDelete(false) }}>
             + {t('toolbar.addTask')}
           </button>
-          <button type="button" className={styles.action} onClick={() => setPositions(layoutPlan(plan))}>
-            {t('toolbar.autoLayout')}
-          </button>
-          <button type="button" className={styles.action} title={t('toolbar.fitViewHint')} onClick={() => rfRef.current?.fitView({ padding: 0.2 })}>
-            {t('toolbar.fitView')}
-          </button>
           <button type="button" className={styles.action} disabled={state.past.length === 0} title={t('toolbar.undoHint')} onClick={() => dispatch({ type: 'undo' })}>
             {t('toolbar.undo')}
           </button>
@@ -302,45 +301,92 @@ export function PlanCanvas(props: PlanCanvasProps): JSX.Element {
           <button type="button" className={`${styles.action} ${styles.actionPrimary}`} disabled={!state.dirty} onClick={() => setDiffOpen(true)}>
             {t('toolbar.apply')}
           </button>
-          <button
-            type="button"
-            className={`${styles.action} ${showMinimap ? styles.actionActive : ''}`}
-            aria-pressed={showMinimap}
-            title={t('toolbar.map')}
-            onClick={() => setShowMinimap((v) => !v)}
-          >
-            {t('toolbar.map')}
-          </button>
-          <button
-            type="button"
-            className={`${styles.action} ${interactive ? styles.actionActive : ''}`}
-            aria-pressed={interactive}
-            title={t('toolbar.interactive')}
-            onClick={() => setInteractive((v) => !v)}
-          >
-            {t('toolbar.interactive')}
-          </button>
-          <label className={styles.selectWrap} title={t('toolbar.theme')}>
-            <span className={styles.visuallyHidden}>{t('toolbar.theme')}</span>
-            <select
-              className={styles.select}
-              value={theme}
-              aria-label={t('toolbar.theme')}
-              onChange={(e) => setTheme(e.target.value as ThemeMode)}
+          <div className={styles.moreWrap}>
+            <button
+              type="button"
+              className={`${styles.action} ${menuOpen ? styles.actionActive : ''}`}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen((v) => !v)}
             >
-              <option value="follow">{t('toolbar.themeFollow')}</option>
-              <option value="day">{t('toolbar.themeDay')}</option>
-              <option value="night">{t('toolbar.themeNight')}</option>
-            </select>
-          </label>
-          <button
-            type="button"
-            className={styles.action}
-            title={fullscreen ? t('toolbar.exitFullscreen') : t('toolbar.fullscreen')}
-            onClick={() => setFullscreen((v) => !v)}
-          >
-            {fullscreen ? t('toolbar.exitFullscreen') : t('toolbar.fullscreen')}
-          </button>
+              {t('toolbar.more')}
+            </button>
+            {menuOpen && (
+              <>
+                <button
+                  type="button"
+                  className={styles.menuBackdrop}
+                  tabIndex={-1}
+                  aria-label={t('diff.cancel')}
+                  onClick={() => setMenuOpen(false)}
+                />
+                <div className={styles.moreMenu} role="menu">
+                  <div className={styles.moreGroup} role="group" aria-label={t('group.view')}>
+                    <div className={styles.moreGroupTitle}>{t('group.view')}</div>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className={styles.moreItem}
+                      onClick={() => { setPositions(layoutPlan(plan)); setMenuOpen(false) }}
+                    >
+                      {t('toolbar.autoLayout')}
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className={styles.moreItem}
+                      onClick={() => { rfRef.current?.fitView({ padding: 0.2 }); setMenuOpen(false) }}
+                    >
+                      {t('toolbar.fitView')}
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className={`${styles.moreItem} ${showMinimap ? styles.moreItemActive : ''}`}
+                      aria-pressed={showMinimap}
+                      onClick={() => { setShowMinimap((v) => !v); setMenuOpen(false) }}
+                    >
+                      {t('toolbar.map')}
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className={`${styles.moreItem} ${interactive ? styles.moreItemActive : ''}`}
+                      aria-pressed={interactive}
+                      onClick={() => { setInteractive((v) => !v); setMenuOpen(false) }}
+                    >
+                      {t('toolbar.interactive')}
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className={`${styles.moreItem} ${fullscreen ? styles.moreItemActive : ''}`}
+                      aria-pressed={fullscreen}
+                      onClick={() => { setFullscreen((v) => !v); setMenuOpen(false) }}
+                    >
+                      {fullscreen ? t('toolbar.exitFullscreen') : t('toolbar.fullscreen')}
+                    </button>
+                  </div>
+                  <div className={styles.moreGroup} role="group" aria-label={t('group.appearance')}>
+                    <div className={styles.moreGroupTitle}>{t('group.appearance')}</div>
+                    <label className={styles.moreThemeRow}>
+                      <span>{t('toolbar.theme')}</span>
+                      <select
+                        className={styles.select}
+                        value={theme}
+                        aria-label={t('toolbar.theme')}
+                        onChange={(e) => { setTheme(e.target.value as ThemeMode); setMenuOpen(false) }}
+                      >
+                        <option value="follow">{t('toolbar.themeFollow')}</option>
+                        <option value="day">{t('toolbar.themeDay')}</option>
+                        <option value="night">{t('toolbar.themeNight')}</option>
+                      </select>
+                    </label>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
