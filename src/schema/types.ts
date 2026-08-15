@@ -93,6 +93,17 @@ export interface VisualPlan {
   id: string
   /** Current version number; 1 is the first approved plan. */
   version: number
+  /**
+   * Version approved by the user; null until the first Apply.
+   * Execution is bound to this version — later drafts must never replace it.
+   */
+  approvedVersion: number | null
+  /**
+   * Version the agent is executing; null until execution starts.
+   * Kept separate from `version` so a newer draft (v5) cannot silently
+   * override an in-flight approved plan (v4).
+   */
+  executionVersion: number | null
   title: string
   goal: string
   status: PlanStatus
@@ -124,6 +135,7 @@ export interface PlanIssue {
     | 'duplicate-edge'
     | 'invalid-edge'
     | 'circular-dependency'
+    | 'invalid-version-bound'
     | 'empty-plan'
   message: string
   /** Task id the issue belongs to, when scoped. */

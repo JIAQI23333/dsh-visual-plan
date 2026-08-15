@@ -75,10 +75,14 @@ export function planReducer(state: PlanEditorState, action: PlanAction): PlanEdi
 
     case 'applied': {
       // Approving a revision bumps the version and moves the plan into
-      // execution (v1 → v2 → v3 …, per the versioning contract).
+      // execution (v1 → v2 → v3 …, per the versioning contract). The new
+      // version is simultaneously the approved version and the version bound
+      // to execution: a later draft must never silently replace it.
       const next = clonePlan(state.current)
       next.version = state.base.version + 1
       next.status = 'executing'
+      next.approvedVersion = next.version
+      next.executionVersion = next.version
       return { ...state, base: next, current: next, dirty: false, error: null }
     }
 

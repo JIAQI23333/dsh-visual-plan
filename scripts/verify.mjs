@@ -146,6 +146,9 @@ check('adapter extracts a plan from exit_plan_mode events', result !== null)
 const plan = result.plan
 check('plan goal comes from latest user text', plan.goal.includes('登录'), plan.goal)
 check('plan status starts as reviewing', plan.status === 'reviewing', plan.status)
+check('plan starts at version 1', plan.version === 1, String(plan.version))
+check('plan has no approved version until Apply', plan.approvedVersion === null, String(plan.approvedVersion))
+check('plan has no execution version until Apply', plan.executionVersion === null, String(plan.executionVersion))
 check('plan id is seq-derived', plan.id === 'plan_5', plan.id)
 check('edges are derived from dependencies', plan.edges.length === plan.tasks.reduce((n, t) => n + t.dependencies.length, 0), JSON.stringify(plan.edges))
 check('explicit dependency resolved by title', plan.tasks[1]?.dependencies.some((d) => plan.tasks[0]?.id === d), JSON.stringify(plan.tasks[1]?.dependencies))
@@ -180,6 +183,17 @@ cyclePlan.tasks[0].dependencies = ['task_002']
 const cycle = validatePlan(cyclePlan, { repair: false })
 check('circular dependency is detected', cycle.issues.some((i) => i.code === 'circular-dependency'), JSON.stringify(cycle.issues))
 check('hasCycle helper agrees', hasCycle(cycle.plan ?? cyclePlan))
+
+const badBounds = JSON.parse(JSON.stringify(plan))
+badBounds.approvedVersion = 0
+badBounds.executionVersion = 2.5
+const boundsIssues = validatePlan(badBounds, { repair: true })
+check('invalid version bounds are repaired to null', boundsIssues.plan?.approvedVersion === null && boundsIssues.plan?.executionVersion === null, JSON.stringify(boundsIssues.plan))
+check('invalid version bounds are reported as warnings', boundsIssues.issues.some((i) => i.code === 'invalid-version-bound'), JSON.stringify(boundsIssues.issues))
+const overBound = JSON.parse(JSON.stringify(plan))
+overBound.approvedVersion = 5
+const overIssues = validatePlan(overBound, { repair: true })
+check('approvedVersion above current version is repaired', overIssues.plan?.approvedVersion === null, String(overIssues.plan?.approvedVersion))
 
 // --- Diff ---
 const edited = JSON.parse(JSON.stringify(plan))
@@ -231,11 +245,15 @@ applier = planReducer(applier, { type: 'addTask', task: { title: '新增步骤',
 applier = planReducer(applier, { type: 'applied' })
 check('applied bumps version v1 → v2', applier.base.version === 2 && applier.dirty === false, `version=${applier.base.version}`)
 check('applied moves status to executing', applier.base.status === 'executing', applier.base.status)
+check('applied binds approved version to v2', applier.base.approvedVersion === 2, String(applier.base.approvedVersion))
+check('applied binds execution to v2', applier.base.executionVersion === 2, String(applier.base.executionVersion))
 
 // --- Write-back message ---
-const message = buildRevisedPlanMessage(edited, diff)
+const approved = { ...edited, version: 2, status: 'executing', approvedVersion: 2, executionVersion: 2 }
+const message = buildRevisedPlanMessage(approved, diff)
 check('write-back message announces user approval', message.includes('explicitly approved by the user'))
-check('write-back message asks to continue execution', message.includes('Continue execution according to the revised plan'))
+check('write-back message binds the approved version', message.includes('Plan v2') && message.includes('Execute Plan v2 exactly'))
+check('write-back message forbids silent plan modification', message.includes('do not silently modify the approved plan'))
 check('write-back message embeds full revised markdown', message.includes('# 实现用户登录功能') && message.includes('添加认证测试'))
 check('write-back message lists changes', message.includes('REMOVED') && message.includes('ADDED') && message.includes('MODIFIED'))
 
@@ -251,13 +269,16 @@ try {
   check('plan.md contains the plan title', planMd.includes('# 实现用户登录功能'))
   const stored = await readStoredPlan(scratch)
   check('stored plan round-trips through plan.json', stored !== null && stored.tasks.length === plan.tasks.length)
+  check('stored v1 keeps unbound version fields', stored?.approvedVersion === null && stored?.executionVersion === null, JSON.stringify(stored))
 
-  const v2 = await saveRevision(scratch, edited, diff, 'user')
+  const v2 = await saveRevision(scratch, approved, diff, 'user')
   check('second save creates v2 (version bump)', v2.version === 2, String(v2.version))
   const metas = await readRevisionMetas(scratch)
   check('revision listing is ordered v1, v2', metas.length === 2 && metas[0]?.version === 1 && metas[1]?.version === 2, JSON.stringify(metas.map((m) => m.version)))
   check('revision listing carries change summaries', metas[1]?.changes.added.some((t) => t.title === '添加认证测试'), JSON.stringify(metas[1]?.changes.added))
-  check('stored plan.json is now v2 content', (await readStoredPlan(scratch))?.tasks.some((t) => t.title === '添加认证测试'))
+  const storedV2 = await readStoredPlan(scratch)
+  check('stored plan.json is now v2 content', storedV2?.tasks.some((t) => t.title === '添加认证测试'))
+  check('stored v2 keeps approved/execution version bounds', storedV2?.approvedVersion === 2 && storedV2?.executionVersion === 2, JSON.stringify(storedV2))
 } finally {
   await import('node:fs/promises').then(({ rm }) => rm(scratch, { recursive: true, force: true }))
 }

@@ -197,10 +197,13 @@ export function PlanCanvas(props: PlanCanvasProps): JSX.Element {
     setSubmitting(true)
     setSubmitError(null)
     try {
+      const nextVersion = state.base.version + 1
       const approved: VisualPlan = {
         ...state.current,
-        version: state.base.version + 1,
+        version: nextVersion,
         status: 'executing',
+        approvedVersion: nextVersion,
+        executionVersion: nextVersion,
       }
       await savePlanToHost(sessionId, approved, diff, 'user')
       const message = buildRevisedPlanMessage(approved, diff)
@@ -223,6 +226,11 @@ export function PlanCanvas(props: PlanCanvasProps): JSX.Element {
         <div className={styles.toolbarLeft}>
           <span className={styles.title}>{plan.title}</span>
           <span className={styles.badge}>v{plan.version}</span>
+          {plan.approvedVersion != null && (
+            <span className={`${styles.badge} ${styles.badgeApproved}`}>
+              {t('toolbar.approved')} v{plan.approvedVersion}
+            </span>
+          )}
           <span className={`${styles.badge} ${styles[`planStatus${plan.status}`]}`}>{t(`planStatus.${plan.status}`)}</span>
           {state.dirty && <span className={`${styles.badge} ${styles.badgeDirty}`}>{t('toolbar.edited')}</span>}
         </div>

@@ -148,6 +148,11 @@ body[data-ds-dark-theme] .root:not([data-theme]) {
   border-color: color-mix(in srgb, var(--vp-warn) 45%, transparent);
 }
 
+.badgeApproved {
+  color: var(--vp-ok);
+  border-color: color-mix(in srgb, var(--vp-ok) 45%, transparent);
+}
+
 .planStatusreviewing {
   color: var(--vp-warn);
 }

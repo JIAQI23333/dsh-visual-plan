@@ -100,6 +100,27 @@ export function validatePlan(input: unknown, options: { repair?: boolean } = {})
   const version = typeof input.version === 'number' && Number.isInteger(input.version) && input.version >= 1
     ? input.version
     : 1
+  let approvedVersion = readVersionBound(input.approvedVersion, 'approvedVersion', issues)
+  let executionVersion = readVersionBound(input.executionVersion, 'executionVersion', issues)
+  // Version bounds must never point past the current plan version: a bound
+  // above `version` would claim an approval/execution that this plan cannot
+  // represent, so it is repaired to null with a warning.
+  if (approvedVersion !== null && approvedVersion > version) {
+    issues.push({
+      level: 'warning',
+      code: 'invalid-version-bound',
+      message: `"approvedVersion" (${approvedVersion}) cannot exceed the current version (${version}); reset to null.`,
+    })
+    approvedVersion = null
+  }
+  if (executionVersion !== null && executionVersion > version) {
+    issues.push({
+      level: 'warning',
+      code: 'invalid-version-bound',
+      message: `"executionVersion" (${executionVersion}) cannot exceed the current version (${version}); reset to null.`,
+    })
+    executionVersion = null
+  }
   const metadata = isRecord(input.metadata) ? input.metadata : {}
 
   if (id === '') issues.push({ level: 'error', code: 'missing-field', message: 'Plan is missing "id".' })
@@ -211,7 +232,40 @@ export function validatePlan(input: unknown, options: { repair?: boolean } = {})
     })
   }
 
-  const plan: VisualPlan = { id, title, goal, status, version, tasks, edges, comments, metadata }
+  const plan: VisualPlan = {
+    id,
+    title,
+    goal,
+    status,
+    version,
+    approvedVersion,
+    executionVersion,
+    tasks,
+    edges,
+    comments,
+    metadata,
+  }
   const errors = issues.filter((i) => i.level === 'error')
   return { ok: errors.length === 0, issues, plan }
+}
+
+/**
+ * Read an optional version bound (approvedVersion / executionVersion).
+ * Missing/null stays null; present-but-invalid values are repaired to null
+ * with a warning so a corrupt plan can still load without binding execution
+ * to a nonsense version.
+ */
+function readVersionBound(
+  value: unknown,
+  field: string,
+  issues: PlanIssue[],
+): number | null {
+  if (value === null || value === undefined) return null
+  if (typeof value === 'number' && Number.isInteger(value) && value >= 1) return value
+  issues.push({
+    level: 'warning',
+    code: 'invalid-version-bound',
+    message: `"${field}" must be a positive integer (got ${JSON.stringify(value)}); reset to null.`,
+  })
+  return null
 }

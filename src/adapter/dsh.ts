@@ -108,6 +108,8 @@ export function markdownToVisualPlan(
   const plan: VisualPlan = {
     id: `plan_${sourceSeq}`,
     version: 1,
+    approvedVersion: null,
+    executionVersion: null,
     title,
     goal: options.latestUserText ?? '',
     status: 'reviewing',
@@ -175,18 +177,22 @@ export function resolveAdapter(ctx: PlanAdapterContext): PlanAdapter | null {
  */
 export function buildRevisedPlanMessage(plan: VisualPlan, diff: PlanDiff): string {
   const summary = formatDiff(diff)
+  const bound = plan.approvedVersion ?? plan.version
   return [
     'The user modified the current execution plan.',
     '',
     'Please use the following revised plan.',
     '',
+    `This is Plan v${bound} — the version explicitly approved by the user.`,
+    '',
     'Changes:',
     summary === '' ? '- No structural changes; the plan was reviewed and confirmed.' : summary,
     '',
     'Important:',
-    'The revised plan was explicitly approved by the user.',
+    'The revised plan was explicitly approved by the user. Execute Plan v' + String(bound) + ' exactly.',
     '',
-    'Continue execution according to the revised plan.',
+    'If the situation changes during execution, do not silently modify the approved plan:',
+    'report the change and propose a new plan for the user to approve first.',
     '',
     '```markdown',
     serializePlanMarkdown(plan).trimEnd(),
