@@ -81,11 +81,15 @@ check('Visual Plan sits before Trajectory', planIdx !== -1 && (trajIdx === -1 ||
 
 // 3. Click the Visual Plan tab and verify the view mounts.
 if (planIdx !== -1) {
-  await page.evaluate((idx) => {
+  // Click by label text (not index): the header button list can re-render
+  // between reads, and an index captured earlier may point at the wrong
+  // button by the time the click lands.
+  await page.evaluate(() => {
     const header = document.querySelector('[data-slot="conversation.session.header"]')
     const btns = header ? Array.from(header.querySelectorAll('button')) : []
-    btns[idx]?.click()
-  }, planIdx)
+    const target = btns.find((b) => /可视化计划|Visual Plan/.test(b.textContent ?? ''))
+    target?.click()
+  })
   // The view switch is async; poll until the canvas or the empty state mounts.
   let mounted = false
   let state = null
