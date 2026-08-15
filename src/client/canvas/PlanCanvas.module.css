@@ -1,31 +1,40 @@
 /*
  * Visual Plan palette. "follow" mode (no data-theme) maps to the DSH app's
- * own design tokens so the canvas tracks the app appearance; data-theme=day
- * and data-theme=night force explicit palettes.
+ * real --dsw-alias-* semantic tokens (applied on body, flipping with
+ * body[data-ds-dark-theme]), so the canvas tracks the app appearance;
+ * data-theme=day and data-theme=night force explicit palettes.
  */
 .root {
-  --vp-canvas: var(--dsw-alias-surface-canvas, #0d0f14);
-  --vp-surface-card: var(--dsw-alias-surface-card, #151a22);
-  --vp-surface-raised: var(--dsw-alias-surface-raised, #171b23);
-  --vp-surface-input: var(--dsw-alias-surface-input, #0f1218);
-  --vp-border: var(--dsw-alias-border-strong, #2a3140);
-  --vp-text-primary: var(--dsw-alias-text-primary, #e8eaf0);
+  --vp-canvas: var(--dsw-alias-bg-base, #0d0f14);
+  --vp-surface-card: var(--dsw-alias-bg-layer-1, #151a22);
+  --vp-surface-raised: var(--dsw-alias-bg-multi-select, #171b23);
+  --vp-surface-input: var(--dsw-alias-bg-layer-1, #0f1218);
+  --vp-border: var(--dsw-alias-border-l2, #2a3140);
+  --vp-text-primary: var(--dsw-alias-label-primary, #e8eaf0);
   --vp-text-secondary: var(--dsw-alias-label-secondary, #9aa3b2);
   --vp-text-tertiary: var(--dsw-alias-label-tertiary, #6b7484);
-  --vp-accent: var(--dsw-accent-strong, #3b82f6);
-  --vp-accent-hover: #2f6fe0;
-  --vp-hover: rgba(255, 255, 255, 0.06);
-  --vp-grid: rgba(255, 255, 255, 0.08);
-  --vp-edge: #5b6472;
-  --vp-minimap-bg: rgba(15, 18, 24, 0.85);
-  --vp-minimap-node: #3b82f6;
-  --vp-minimap-stroke: #1e2a3a;
-  --vp-minimap-mask: rgba(0, 0, 0, 0.6);
+  --vp-accent: var(--dsw-alias-state-business-primary, #3b82f6);
+  --vp-accent-hover: var(--dsw-alias-button-info-hover, #2f6fe0);
+  --vp-hover: var(--dsw-alias-interactive-bg-hover, rgba(255, 255, 255, 0.06));
+  --vp-grid: color-mix(in srgb, var(--vp-text-primary) 12%, transparent);
+  --vp-edge: color-mix(in srgb, var(--vp-text-tertiary) 60%, transparent);
+  --vp-minimap-bg: var(--vp-surface-card);
+  --vp-minimap-node: var(--vp-accent);
+  --vp-minimap-stroke: var(--vp-border);
+  --vp-minimap-mask: color-mix(in srgb, var(--vp-canvas) 55%, transparent);
+  --vp-overlay: var(--dsw-alias-bg-mask-1, rgba(0, 0, 0, 0.55));
+  --vp-warn: #b45309;
+  --vp-ok: #15803d;
+  --vp-info: #2563eb;
+  --vp-danger: #dc2626;
+}
+
+/* Follow mode with a dark app: swap status colors to dark-optimized values. */
+body[data-ds-dark-theme] .root:not([data-theme]) {
   --vp-warn: #ffb454;
   --vp-ok: #4fd08c;
   --vp-info: #5aa2ff;
   --vp-danger: #ff6b6b;
-  --vp-overlay: rgba(0, 0, 0, 0.55);
 }
 
 .root[data-theme='day'] {

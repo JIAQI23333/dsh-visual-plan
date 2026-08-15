@@ -49,6 +49,7 @@ type ThemeMode = 'follow' | 'day' | 'night'
 
 const THEME_KEY = 'dsh-visual-plan:theme'
 const MINIMAP_KEY = 'dsh-visual-plan:minimap'
+const INTERACTIVE_KEY = 'dsh-visual-plan:interactive'
 
 function readPref<T>(key: string, fallback: T): T {
   try {
@@ -81,11 +82,13 @@ export function PlanCanvas(props: PlanCanvasProps): JSX.Element {
   const [nodes, setNodes] = useState<PlanFlowNodeType[]>([])
   const [theme, setTheme] = useState<ThemeMode>(() => readPref<ThemeMode>(THEME_KEY, 'follow'))
   const [showMinimap, setShowMinimap] = useState<boolean>(() => readPref<boolean>(MINIMAP_KEY, true))
+  const [interactive, setInteractive] = useState<boolean>(() => readPref<boolean>(INTERACTIVE_KEY, true))
   const [fullscreen, setFullscreen] = useState(false)
   const dragPositions = useRef<PlanPositions>({})
 
   useEffect(() => writePref(THEME_KEY, theme), [theme])
   useEffect(() => writePref(MINIMAP_KEY, showMinimap), [showMinimap])
+  useEffect(() => writePref(INTERACTIVE_KEY, interactive), [interactive])
 
   const titleById = useMemo(() => new Map(plan.tasks.map((task) => [task.id, task.title])), [plan.tasks])
   const idsKey = plan.tasks.map((task) => task.id).join('|')
@@ -245,6 +248,15 @@ export function PlanCanvas(props: PlanCanvasProps): JSX.Element {
           >
             {t('toolbar.map')}
           </button>
+          <button
+            type="button"
+            className={`${styles.action} ${interactive ? styles.actionActive : ''}`}
+            aria-pressed={interactive}
+            title={t('toolbar.interactive')}
+            onClick={() => setInteractive((v) => !v)}
+          >
+            {t('toolbar.interactive')}
+          </button>
           <label className={styles.selectWrap} title={t('toolbar.theme')}>
             <span className={styles.visuallyHidden}>{t('toolbar.theme')}</span>
             <select
@@ -286,6 +298,9 @@ export function PlanCanvas(props: PlanCanvasProps): JSX.Element {
             onEdgesDelete={onEdgesDelete}
             onNodeClick={(_, node) => openEditor(node.id)}
             onPaneClick={() => { setSelectedId(null); setPanelMode('closed') }}
+            elementsSelectable={interactive}
+            nodesDraggable={interactive}
+            nodesConnectable={interactive}
             fitView
             minZoom={0.2}
             maxZoom={1.75}
@@ -293,7 +308,7 @@ export function PlanCanvas(props: PlanCanvasProps): JSX.Element {
             proOptions={{ hideAttribution: true }}
           >
             <Background gap={16} color="var(--vp-grid)" />
-            <Controls />
+            <Controls showInteractive={false} />
             {showMinimap && (
               <MiniMap
                 pannable
