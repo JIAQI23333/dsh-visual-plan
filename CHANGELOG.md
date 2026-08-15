@@ -14,6 +14,16 @@
 - 回写消息显式声明批准版本（Plan vN），并要求 Agent 执行中遇到变化时先提出新计划、由用户批准。
 - 工具栏显示「已批准 vN」徽标，Plan ↔ Agent 状态边界可视化。
 - schema 校验：无效的版本边界（非正整数、超过当前版本）会被修复为 null 并给出警告。
+- 显式 Plan 生命周期状态机（`draft → reviewing → approved → executing → completed / failed`）：
+  迁移表 + 状态/版本一致性校验（warning，向后兼容旧 `.plan` 数据）。
+- **Execution Version Lock**：`executionVersion` 写一次只读；执行中 Apply 只提升
+  `approvedVersion`，回写消息继续绑定执行中的版本。
+- **Plan Snapshot**：Apply 时写入 `.plan/execution.json`
+  （`{ planId, executionVersion, revision, startedAt, status }`），每个执行版本写一次。
+- **Undo / Redo**：编辑器历史栈（上限 100），工具栏按钮 + 快捷键，评论增删可撤销。
+- **快捷键**：Delete / Backspace 删除节点、Cmd/Ctrl+Z / Shift+Z 撤销重做、
+  Cmd/Ctrl+S 打开 Diff、Space 平移、F Fit View（输入框聚焦时不生效）。
+- 工具栏「适应视图（F）」按钮；执行中与已批准版本不同时显示「执行中 vN」徽标。
 
 ### Fixed
 

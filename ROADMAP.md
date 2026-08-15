@@ -16,36 +16,36 @@
 - [x] Apply → DSH（回写消息绑定批准版本，禁止静默改计划）
 - [x] 首次发布（GitHub、fresh profile 验证、v0.1.0 tag）
 
-## v0.1.1 — Editor Foundation + Execution Safety（计划已定，待开发）
+## v0.1.1 — Editor Foundation + Execution Safety（开发中，P0 已实现）
 
 目标：补齐编辑器基础与执行安全，**不引入新的大功能**。
 
 ### P0
 
-- [ ] **Undo / Redo**
+- [x] **Undo / Redo**
   - `PlanEditorState` 增加 `past / future` 快照栈（深度上限 100）；所有 reducer 变更入栈。
   - 工具栏按钮 + Cmd/Ctrl+Z / Cmd/Ctrl+Shift+Z；`discard` / `applied` / `reset` 清空历史。
-- [ ] **Shortcut**（输入框聚焦时不生效）
+- [x] **Shortcut**（输入框聚焦时不生效）
   - Delete / Backspace 删除选中节点；Cmd/Ctrl+S 打开 Diff；Space 平移；F Fit View。
-- [ ] **Plan State Machine**
+- [x] **Plan State Machine**
   - 显式状态机：`draft → reviewing → approved → executing → completed / failed`。
   - 定义允许的迁移与守卫（如 executing 不得直接回 draft；failed 只能由 executing 进入）。
   - schema 校验加入状态迁移规则；UI 状态徽标与状态机一致。
-- [ ] **Snapshot**
+- [x] **Snapshot**
   - Apply 时写入 `.plan/execution.json`：`{ planId, executionVersion, revision, startedAt, status }`，
     绑定不可变 `revisions/vN.json`；后续草稿 / 新 Apply 不得修改。
-- [ ] **Execution Version Lock**
+- [x] **Execution Version Lock**
   - `executionVersion` 一旦写入即只读；执行中 Apply 只提升 `approvedVersion`，
     回写消息继续绑定执行中的版本。
 
 ### P1
 
 - [ ] **Bug Fix**（真实任务验证反馈；候选：孤立节点提示、删除后选择状态清理、空状态语言切换）
-- [ ] **Validation**（状态机迁移校验、executionVersion 锁校验、向后兼容 `.plan` 数据校验）
+- [x] **Validation**（状态机迁移校验、executionVersion 锁校验、向后兼容 `.plan` 数据校验）
 
 ### 验收标准（v0.1.1 Release）
 
-- typecheck + build + verify（含新增用例）全绿
+- typecheck + build + verify（含新增用例）全绿（当前 93 项）
 - GUI probe 通过（标签注册、视图挂载、0 控制台错误）
 - 全新 profile 从 GitHub 安装 `v0.1.1` tag 验证通过
 - CHANGELOG / ROADMAP 更新后 tag `v0.1.1`

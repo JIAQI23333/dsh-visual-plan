@@ -42,6 +42,7 @@ dsh-visual-plan 是 DeepSeek Harness 的插件：把 Plan Mode 生成的计划�
 ## 数据与版本
 
 - `.plan/plan.json`（最新 VisualPlan）+ `plan.md`（Agent 可读）+ `revisions/vN.json`（不可变快照）
+  + `execution.json`（写一次的执行快照，绑定执行的版本）
 - 每次 Apply 生成新版本：`version+1`，同时记为 `approvedVersion` / `executionVersion`
 - 回写消息必须声明批准版本（Plan vN），并禁止 Agent 静默改计划
 

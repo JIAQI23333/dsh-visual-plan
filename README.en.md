@@ -38,6 +38,7 @@ User request → DSH Plan Mode → structured VisualPlan JSON → node-graph can
 - **Robustness**: JSON validation, missing-dependency and circular-dependency detection;
   falls back to the Markdown plan when parsing fails.
 - **Canvas capabilities**: theme (follow / day / night), minimap toggle, fullscreen, interactivity toggle,
+  undo/redo, keyboard shortcuts (Delete, Cmd/Ctrl+Z, Cmd/Ctrl+S, F, …),
   high-contrast controls in the bottom-left corner.
 - **Localization**: 中文 / English, following the DSH Language setting (Chinese by default).
 - **Decoupled from DSH core**: UI is isolated from the Agent Core; disabling the plugin leaves DSH's built-in Plan Mode untouched.
@@ -146,7 +147,7 @@ replaces the version that is currently being executed.
 npm install
 npm run typecheck   # host + client type checks
 npm run build       # host + client build
-npm run verify      # offline contract + pure-logic verification (77 checks)
+npm run verify      # offline contract + pure-logic verification (93 checks)
 ```
 
 ## E2E

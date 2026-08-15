@@ -35,7 +35,8 @@ Agent 在 Plan Mode 中生成的计划会自动变成一张可编辑的节点图
 - **Plan ↔ Agent 状态边界**：`plan.status / version / approvedVersion / executionVersion`，
   执行绑定到批准版本，为后续动态重新规划打好基础。
 - **健壮性**：JSON 校验、依赖不存在检测、循环依赖检测；解析失败时回退 Markdown 计划。
-- **界面能力**：主题跟随 / 白天 / 黑夜、地图开关、全屏、交互开关、左下角高对比度控件。
+- **界面能力**：主题跟随 / 白天 / 黑夜、地图开关、全屏、交互开关、Undo/Redo、
+  快捷键（Delete、Cmd/Ctrl+Z、Cmd/Ctrl+S、F 等）、左下角高对比度控件。
 - **国际化**：中文 / English，跟随 DSH 自带 Language 设置（默认中文）。
 - **与 DSH 解耦**：UI 与 Agent Core 隔离；关闭插件后 DSH 原有 Plan Mode 完全不受影响。
 
@@ -140,7 +141,7 @@ Plan v3（新草稿）         draft         approvedVersion = 2      executionV
 npm install
 npm run typecheck   # host + client 类型检查
 npm run build       # host + client 构建
-npm run verify      # 离线契约 + 纯逻辑验证（77 项）
+npm run verify      # 离线契约 + 纯逻辑验证（93 项）
 ```
 
 ## E2E
