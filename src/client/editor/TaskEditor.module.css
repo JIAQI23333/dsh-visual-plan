@@ -24,7 +24,7 @@
 
 .label {
   font-size: 11px;
-  color: var(--dsw-alias-label-secondary, #9aa3b2);
+  color: var(--vp-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -32,10 +32,10 @@
 .input {
   width: 100%;
   box-sizing: border-box;
-  border: 1px solid var(--dsw-alias-border-strong, #2c3340);
+  border: 1px solid var(--vp-border);
   border-radius: 6px;
-  background: var(--dsw-alias-surface-input, #0f1218);
-  color: var(--dsw-alias-text-primary, #e8eaf0);
+  background: var(--vp-surface-input);
+  color: var(--vp-text-primary);
   padding: 6px 8px;
   font-size: 12px;
   font-family: inherit;
@@ -43,7 +43,7 @@
 
 .input:focus {
   outline: none;
-  border-color: var(--dsw-accent-strong, #3b82f6);
+  border-color: var(--vp-accent);
 }
 
 .textarea {
@@ -55,7 +55,7 @@
 .deps {
   max-height: 160px;
   overflow-y: auto;
-  border: 1px solid var(--dsw-alias-border-strong, #2c3340);
+  border: 1px solid var(--vp-border);
   border-radius: 6px;
   padding: 4px;
   display: flex;
@@ -64,7 +64,7 @@
 }
 
 .depsEmpty {
-  color: var(--dsw-alias-label-tertiary, #6b7484);
+  color: var(--vp-text-tertiary);
   font-size: 12px;
   padding: 6px;
 }
@@ -80,7 +80,7 @@
 }
 
 .depRow:hover {
-  background: var(--dsw-alias-surface-raised, #171b23);
+  background: var(--vp-hover);
 }
 
 .depTitle {
@@ -97,9 +97,9 @@
 
 .button {
   appearance: none;
-  border: 1px solid var(--dsw-alias-border-strong, #2c3340);
-  background: var(--dsw-alias-surface-raised, #171b23);
-  color: var(--dsw-alias-text-primary, #e8eaf0);
+  border: 1px solid var(--vp-border);
+  background: var(--vp-surface-raised);
+  color: var(--vp-text-primary);
   border-radius: 6px;
   padding: 5px 10px;
   font-size: 12px;
@@ -112,27 +112,27 @@
 }
 
 .primary {
-  background: var(--dsw-accent-strong, #3b82f6);
+  background: var(--vp-accent);
   border-color: transparent;
   color: #fff;
   font-weight: 600;
 }
 
 .danger {
-  background: #d64545;
+  background: var(--vp-danger);
   border-color: transparent;
   color: #fff;
   font-weight: 600;
 }
 
 .dangerGhost {
-  color: #ff8f8f;
-  border-color: rgba(255, 107, 107, 0.4);
+  color: var(--vp-danger);
+  border-color: color-mix(in srgb, var(--vp-danger) 45%, transparent);
   width: 100%;
 }
 
 .deleteZone {
-  border-top: 1px solid var(--dsw-alias-border-strong, #262b36);
+  border-top: 1px solid var(--vp-border);
   padding-top: 10px;
   display: flex;
   flex-direction: column;
@@ -141,6 +141,6 @@
 
 .deleteWarn {
   font-size: 12px;
-  color: #ffb454;
+  color: var(--vp-warn);
   line-height: 1.45;
 }

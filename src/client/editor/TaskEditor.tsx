@@ -6,6 +6,7 @@
 
 import { useState } from 'react'
 import { TASK_STATUSES, TASK_TYPES, type PlanTask, type TaskStatus, type TaskType } from '../../schema/types.ts'
+import type { VisualPlanT } from '../i18n.ts'
 import styles from './TaskEditor.module.css'
 
 export interface TaskDraft {
@@ -22,6 +23,7 @@ interface TaskEditorProps {
   tasks: readonly PlanTask[]
   confirmDelete?: boolean
   dependents?: readonly PlanTask[]
+  t: VisualPlanT
   onSave: (draft: TaskDraft) => void
   onCancel: () => void
   onDelete?: () => void
@@ -32,7 +34,7 @@ function emptyDraft(): TaskDraft {
 }
 
 export function TaskEditor(props: TaskEditorProps): JSX.Element {
-  const { mode, task, tasks, confirmDelete = false, dependents = [], onSave, onCancel, onDelete } = props
+  const { mode, task, tasks, confirmDelete = false, dependents = [], t, onSave, onCancel, onDelete } = props
   const [draft, setDraft] = useState<TaskDraft>(() => (
     task
       ? { title: task.title, description: task.description, type: task.type, status: task.status, dependencies: [...task.dependencies] }
@@ -53,56 +55,56 @@ export function TaskEditor(props: TaskEditorProps): JSX.Element {
 
   return (
     <div className={styles.editor}>
-      <div className={styles.heading}>{mode === 'new' ? 'New Task' : 'Task Editor'}</div>
+      <div className={styles.heading}>{mode === 'new' ? t('editor.newTask') : t('editor.taskEditor')}</div>
 
       <label className={styles.field}>
-        <span className={styles.label}>Title</span>
+        <span className={styles.label}>{t('editor.title')}</span>
         <input
           className={styles.input}
           value={draft.title}
-          placeholder="Task title"
+          placeholder={t('editor.title')}
           onChange={(e) => setDraft({ ...draft, title: e.target.value })}
         />
       </label>
 
       <label className={styles.field}>
-        <span className={styles.label}>Description</span>
+        <span className={styles.label}>{t('editor.description')}</span>
         <textarea
           className={`${styles.input} ${styles.textarea}`}
           value={draft.description}
           rows={4}
-          placeholder="What does this task involve?"
+          placeholder={t('editor.description')}
           onChange={(e) => setDraft({ ...draft, description: e.target.value })}
         />
       </label>
 
       <div className={styles.fieldRow}>
         <label className={styles.field}>
-          <span className={styles.label}>Type</span>
+          <span className={styles.label}>{t('editor.type')}</span>
           <select
             className={styles.input}
             value={draft.type}
             onChange={(e) => setDraft({ ...draft, type: e.target.value as TaskType })}
           >
-            {TASK_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+            {TASK_TYPES.map((type) => <option key={type} value={type}>{t(`taskType.${type}`)}</option>)}
           </select>
         </label>
         <label className={styles.field}>
-          <span className={styles.label}>Status</span>
+          <span className={styles.label}>{t('editor.status')}</span>
           <select
             className={styles.input}
             value={draft.status}
             onChange={(e) => setDraft({ ...draft, status: e.target.value as TaskStatus })}
           >
-            {TASK_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+            {TASK_STATUSES.map((status) => <option key={status} value={status}>{t(`taskStatus.${status}`)}</option>)}
           </select>
         </label>
       </div>
 
       <div className={styles.field}>
-        <span className={styles.label}>Dependencies</span>
+        <span className={styles.label}>{t('editor.dependencies')}</span>
         <div className={styles.deps}>
-          {others.length === 0 && <div className={styles.depsEmpty}>No other tasks.</div>}
+          {others.length === 0 && <div className={styles.depsEmpty}>{t('editor.noOtherTasks')}</div>}
           {others.map((other) => (
             <label key={other.id} className={styles.depRow}>
               <input
@@ -117,14 +119,14 @@ export function TaskEditor(props: TaskEditorProps): JSX.Element {
       </div>
 
       <div className={styles.actions}>
-        <button type="button" className={styles.button} onClick={onCancel}>Cancel</button>
+        <button type="button" className={styles.button} onClick={onCancel}>{t('editor.cancel')}</button>
         <button
           type="button"
           className={`${styles.button} ${styles.primary}`}
           disabled={!valid}
           onClick={() => onSave(draft)}
         >
-          Save
+          {t('editor.save')}
         </button>
       </div>
 
@@ -134,19 +136,19 @@ export function TaskEditor(props: TaskEditorProps): JSX.Element {
             <>
               <div className={styles.deleteWarn}>
                 {dependents.length > 0
-                  ? `This task is required by ${dependents.length} other task${dependents.length === 1 ? '' : 's'}: ${dependents.map((d) => d.title).join(', ')}. Delete anyway?`
-                  : 'Delete this task? This cannot be undone.'}
+                  ? t('editor.deleteConfirm', { count: String(dependents.length), names: dependents.map((d) => d.title).join(', ') })
+                  : t('editor.deleteConfirmSimple')}
               </div>
               <div className={styles.actions}>
-                <button type="button" className={styles.button} onClick={onCancel}>Cancel</button>
+                <button type="button" className={styles.button} onClick={onCancel}>{t('editor.cancel')}</button>
                 <button type="button" className={`${styles.button} ${styles.danger}`} onClick={onDelete}>
-                  Delete
+                  {t('editor.delete')}
                 </button>
               </div>
             </>
           ) : (
             <button type="button" className={`${styles.button} ${styles.dangerGhost}`} onClick={onDelete}>
-              Delete
+              {t('editor.delete')}
             </button>
           )}
         </div>

@@ -103,7 +103,7 @@ if (planIdx !== -1) {
   }
   check('canvas mounted with real plan nodes', nodes > 0, `nodes=${nodes} edges=${edges}`)
   check('canvas has dependency edges', edges > 0, `edges=${edges}`)
-  const hasToolbar = await page.evaluate(() => /Apply Changes/.test(document.body.innerText))
+  const hasToolbar = await page.evaluate(() => /应用修改|Apply Changes/.test(document.body.innerText))
   check('Apply Changes affordance present', hasToolbar)
 }
 

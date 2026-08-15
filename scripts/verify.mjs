@@ -99,6 +99,15 @@ const { validatePlan, hasCycle } = await import('../lib/schema/validate.js')
 const { deepseekHarnessAdapter, buildRevisedPlanMessage, parsePlanArgs, extractPlanMarkdowns } = await import('../lib/adapter/dsh.js')
 const { planReducer, createEditorState } = await import('../lib/client/state.js')
 const { saveRevision, readStoredPlan, readRevisionMetas } = await import('../lib/host/store.js')
+const { visualPlanEn, visualPlanZh } = await import('../lib/client/i18n.js')
+
+// --- i18n ---
+const zhKeys = Object.keys(visualPlanZh).sort()
+const enKeys = Object.keys(visualPlanEn).sort()
+check('i18n zh/en key sets are balanced', JSON.stringify(zhKeys) === JSON.stringify(enKeys),
+  `zh=${zhKeys.length} en=${enKeys.length}`)
+check('i18n dictionaries are non-empty', zhKeys.length > 30, String(zhKeys.length))
+check('i18n default tab label is Chinese', visualPlanZh.tab === '可视化计划', visualPlanZh.tab)
 
 // --- Markdown parsing ---
 const fixture = `# 实现用户登录功能
@@ -205,7 +214,7 @@ check('revision keeps author and timestamp', version.author === 'user' && typeof
 // --- Reducer ---
 let editor = createEditorState(plan)
 editor = planReducer(editor, { type: 'addDependency', taskId: 'task_001', dependencyId: 'task_002' })
-check('cycle-forming dependency is rejected', editor.error !== null && editor.error.includes('Circular'), editor.error ?? '')
+check('cycle-forming dependency is rejected', editor.error?.code === 'circular', JSON.stringify(editor.error))
 editor = planReducer(editor, { type: 'addTask', task: { title: '新任务', description: '', type: 'other', status: 'pending', dependencies: [], metadata: {} } })
 check('addTask appends with a generated id', editor.current.tasks.some((t) => t.id === 'task_006' && t.title === '新任务'))
 editor = planReducer(editor, { type: 'editTask', taskId: 'task_006', patch: { title: '改名' } })

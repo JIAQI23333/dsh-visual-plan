@@ -14,36 +14,59 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import '@xyflow/react/dist/style.css'
 import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
-import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
+import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type { PlanAction, PlanEditorState } from './state.ts'
 import { createEditorState, planReducer } from './state.ts'
 import { extractPlan } from './extract.ts'
 import { PlanCanvas } from './canvas/PlanCanvas.tsx'
+import { visualPlanEn, visualPlanZh, type VisualPlanT } from './i18n.ts'
 import styles from './canvas/PlanCanvas.module.css'
 
 /** Services required by the client face. */
-export const inject = ['slots']
+export const inject = ['slots', 'locale']
 
 /** Conversation view tab id. */
 export const VIEW_ID = 'visual-plan'
 
 /** Full props of the visual-plan view entry (standard session kit only). */
-export type PlanViewProps = PropsRuntime<'conversation.view'>
+export type PlanViewProps = PropsRuntime<'conversation.view'> & PropsLocale<'visual-plan'>
 
 /** Client plugin body: register the Visual Plan tab. */
 export function apply(ctx: ClientContext): void {
-  ctx.slots.inject('conversation.view', () => ctx.slots.register({
-    name: 'conversation.view',
-    id: VIEW_ID,
-    order: 5,
-    label: () => 'Visual Plan',
-  }, PlanView))
+  ctx.effect(() => {
+    // Dictionary registration; the typed register enforces zh/en key balance.
+    const disposeLocale = ctx.locale.register('visual-plan', { zh: visualPlanZh, en: visualPlanEn })
+    const t = ctx.locale.bind('visual-plan')
+
+    // The view entry is re-registered on locale switches: the label thunk
+    // reads the live translation, and re-registering bumps the slot ledger so
+    // the shell re-reads the tab label (the contract's re-render trigger).
+    let disposeView: (() => void) | null = null
+    const mountView = (): void => {
+      disposeView?.()
+      disposeView = ctx.slots.inject('conversation.view', () => ctx.slots.register({
+        name: 'conversation.view',
+        id: VIEW_ID,
+        order: 5,
+        label: () => t('tab'),
+        locale: 'visual-plan',
+      }, PlanView))
+    }
+    mountView()
+
+    const offLocale = ctx.on('locale/change', mountView)
+    return () => {
+      offLocale()
+      disposeView?.()
+      disposeLocale()
+    }
+  }, 'dsh-visual-plan: view entry + locale')
 }
 
 /** View component: extract the plan from the snapshot and render the canvas. */
 function PlanView(props: PlanViewProps): JSX.Element {
-  const { useSession, sessionId, inputActions } = props
+  const { useSession, sessionId, inputActions, t } = props
   const snapshot = useSession((s) => s)
 
   const extracted = useMemo(() => (snapshot ? extractPlan(snapshot) : null), [snapshot])
@@ -71,11 +94,8 @@ function PlanView(props: PlanViewProps): JSX.Element {
   if (editor === null) {
     return (
       <div className={styles.empty}>
-        <div>还没有可视化计划</div>
-        <div>
-          在计划模式下让模型产出计划（例如 <code>/plan</code>），计划会以节点画布的形式出现在这里。
-        </div>
-        <div style={{ fontSize: 12, opacity: 0.7 }}>No plan yet — enter plan mode (/plan) and ask for a plan.</div>
+        <div>{t('empty.title')}</div>
+        <div>{t('empty.hint')}</div>
       </div>
     )
   }
@@ -86,6 +106,7 @@ function PlanView(props: PlanViewProps): JSX.Element {
       state={editor}
       dispatch={dispatch}
       inputActions={inputActions}
+      t={t}
     />
   )
 }

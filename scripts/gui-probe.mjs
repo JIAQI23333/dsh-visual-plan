@@ -93,7 +93,7 @@ if (planIdx !== -1) {
     state = await page.evaluate(() => ({
       hasCanvas: Boolean(document.querySelector('.react-flow')),
       hasEmpty: /还没有可视化计划|No plan yet/.test(document.body.innerText),
-      hasToolbar: /Apply Changes/.test(document.body.innerText),
+      hasToolbar: /应用修改|Apply Changes/.test(document.body.innerText),
       bodyHead: document.body.innerText.slice(0, 200),
     }))
     if (state.hasCanvas || state.hasEmpty) { mounted = true; break }

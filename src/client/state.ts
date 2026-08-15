@@ -19,8 +19,14 @@ export interface PlanEditorState {
   current: VisualPlan
   /** True while the working copy differs from base. */
   dirty: boolean
-  /** Last reducer rejection message (e.g. circular dependency). */
-  error: string | null
+  /** Last reducer rejection, as a stable i18n key + params. */
+  error: PlanError | null
+}
+
+/** Stable error identity so the UI can localize without parsing messages. */
+export interface PlanError {
+  code: 'circular' | 'selfDependency' | 'taskNotFound' | 'duplicateId'
+  params?: Record<string, string>
 }
 
 export type PlanAction =
@@ -79,7 +85,7 @@ export function planReducer(state: PlanEditorState, action: PlanAction): PlanEdi
     case 'editTask': {
       const current = clonePlan(state.current)
       const task = current.tasks.find((t) => t.id === action.taskId)
-      if (!task) return { ...state, error: `Task ${action.taskId} not found.` }
+      if (!task) return { ...state, error: { code: 'taskNotFound', params: { id: action.taskId } } }
       Object.assign(task, action.patch)
       current.edges = deriveEdges(current.tasks)
       return { ...state, current, dirty: true, error: null }
@@ -88,7 +94,7 @@ export function planReducer(state: PlanEditorState, action: PlanAction): PlanEdi
     case 'addTask': {
       const current = clonePlan(state.current)
       const id = action.task.id ?? nextTaskId(current.tasks)
-      if (current.tasks.some((t) => t.id === id)) return { ...state, error: `Duplicate task id ${id}.` }
+      if (current.tasks.some((t) => t.id === id)) return { ...state, error: { code: 'duplicateId', params: { id } } }
       current.tasks.push({
         id,
         title: action.task.title,
@@ -105,7 +111,9 @@ export function planReducer(state: PlanEditorState, action: PlanAction): PlanEdi
 
     case 'deleteTask': {
       const current = clonePlan(state.current)
-      if (!current.tasks.some((t) => t.id === action.taskId)) return { ...state, error: `Task ${action.taskId} not found.` }
+      if (!current.tasks.some((t) => t.id === action.taskId)) {
+        return { ...state, error: { code: 'taskNotFound', params: { id: action.taskId } } }
+      }
       current.tasks = current.tasks
         .filter((t) => t.id !== action.taskId)
         .map((t) => ({
@@ -119,16 +127,16 @@ export function planReducer(state: PlanEditorState, action: PlanAction): PlanEdi
 
     case 'addDependency': {
       if (action.taskId === action.dependencyId) {
-        return { ...state, error: 'A task cannot depend on itself.' }
+        return { ...state, error: { code: 'selfDependency' } }
       }
       const current = clonePlan(state.current)
       const task = current.tasks.find((t) => t.id === action.taskId)
-      if (!task) return { ...state, error: `Task ${action.taskId} not found.` }
+      if (!task) return { ...state, error: { code: 'taskNotFound', params: { id: action.taskId } } }
       if (task.dependencies.includes(action.dependencyId)) return state
       task.dependencies.push(action.dependencyId)
       current.edges = deriveEdges(current.tasks)
       if (hasCycle(current)) {
-        return { ...state, error: 'Circular dependency detected. This connection was not applied.' }
+        return { ...state, error: { code: 'circular' } }
       }
       return { ...state, current, dirty: true, error: null }
     }

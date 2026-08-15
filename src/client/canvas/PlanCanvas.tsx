@@ -2,13 +2,17 @@
  * The Visual Plan page: a React Flow task graph with an editor panel.
  *
  * Toolbar (title, revision, status, Add Task, Auto layout, Discard,
- * Apply Changes) → canvas + right-hand editor. Selecting a node opens the
- * editor; connecting nodes edits dependencies; Apply Changes opens the diff
- * dialog and, once confirmed, persists a version and hands the revised plan
- * back to DSH through the composer input actions.
+ * Apply Changes, Map, Theme, Fullscreen) → canvas + right-hand editor.
+ * Selecting a node opens the editor; connecting nodes edits dependencies;
+ * Apply Changes opens the diff dialog and, once confirmed, persists a version
+ * and hands the revised plan back to DSH through the composer input actions.
+ *
+ * Canvas preferences (map visibility, theme) persist to localStorage; theme
+ * is follow-the-app by default with explicit day/night overrides.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   Background,
   Controls,
@@ -24,6 +28,7 @@ import { buildRevisedPlanMessage } from '../../adapter/dsh.ts'
 import { diffPlans } from '../../engine/diff.ts'
 import { savePlanToHost } from '../api.ts'
 import { dependentsOf, type PlanAction, type PlanEditorState } from '../state.ts'
+import type { VisualPlanT } from '../i18n.ts'
 import { layoutPlan, NODE_WIDTH, type PlanPositions } from './layout.ts'
 import { PlanFlowNode, type PlanFlowNodeType } from './PlanFlowNode.tsx'
 import { TaskEditor, type TaskDraft } from '../editor/TaskEditor.tsx'
@@ -36,12 +41,34 @@ interface PlanCanvasProps {
   state: PlanEditorState
   dispatch: (action: PlanAction) => void
   inputActions?: { setDraft: (text: string) => void; submit: () => void } | null
+  t: VisualPlanT
 }
 
 type PanelMode = 'closed' | 'edit' | 'new'
+type ThemeMode = 'follow' | 'day' | 'night'
+
+const THEME_KEY = 'dsh-visual-plan:theme'
+const MINIMAP_KEY = 'dsh-visual-plan:minimap'
+
+function readPref<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key)
+    return raw === null ? fallback : (JSON.parse(raw) as T)
+  } catch {
+    return fallback
+  }
+}
+
+function writePref(key: string, value: unknown): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+  } catch {
+    // Storage unavailable (private mode etc.) — preferences stay session-local.
+  }
+}
 
 export function PlanCanvas(props: PlanCanvasProps): JSX.Element {
-  const { sessionId, state, dispatch, inputActions } = props
+  const { sessionId, state, dispatch, inputActions, t } = props
   const plan = state.current
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -52,10 +79,16 @@ export function PlanCanvas(props: PlanCanvasProps): JSX.Element {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [positions, setPositions] = useState<PlanPositions>({})
   const [nodes, setNodes] = useState<PlanFlowNodeType[]>([])
+  const [theme, setTheme] = useState<ThemeMode>(() => readPref<ThemeMode>(THEME_KEY, 'follow'))
+  const [showMinimap, setShowMinimap] = useState<boolean>(() => readPref<boolean>(MINIMAP_KEY, true))
+  const [fullscreen, setFullscreen] = useState(false)
   const dragPositions = useRef<PlanPositions>({})
 
-  const titleById = useMemo(() => new Map(plan.tasks.map((t) => [t.id, t.title])), [plan.tasks])
-  const idsKey = plan.tasks.map((t) => t.id).join('|')
+  useEffect(() => writePref(THEME_KEY, theme), [theme])
+  useEffect(() => writePref(MINIMAP_KEY, showMinimap), [showMinimap])
+
+  const titleById = useMemo(() => new Map(plan.tasks.map((task) => [task.id, task.title])), [plan.tasks])
+  const idsKey = plan.tasks.map((task) => task.id).join('|')
 
   // (Re)layout on structural change and on the manual Auto layout action.
   useEffect(() => {
@@ -71,10 +104,11 @@ export function PlanCanvas(props: PlanCanvasProps): JSX.Element {
       data: {
         task,
         titleById,
+        t,
         selected: task.id === selectedId,
       },
     })))
-  }, [plan.tasks, positions, selectedId, titleById])
+  }, [plan.tasks, positions, selectedId, titleById, t])
 
   const onNodesChange = useCallback((changes: NodeChange[]) => {
     setNodes((current) => {
@@ -110,7 +144,7 @@ export function PlanCanvas(props: PlanCanvasProps): JSX.Element {
     }
   }, [dispatch])
 
-  const selectedTask = plan.tasks.find((t) => t.id === selectedId) ?? null
+  const selectedTask = plan.tasks.find((task) => task.id === selectedId) ?? null
   const dependents = selectedId ? dependentsOf(plan, selectedId) : []
 
   const openEditor = (taskId: string): void => {
@@ -151,14 +185,9 @@ export function PlanCanvas(props: PlanCanvasProps): JSX.Element {
     setConfirmDelete(false)
   }
 
-  const openDiff = (): void => {
-    setSubmitError(null)
-    setDiffOpen(true)
-  }
-
   const confirmApply = async (): Promise<void> => {
     if (!inputActions) {
-      setSubmitError('Composer is unavailable — cannot submit the revised plan.')
+      setSubmitError(t('diff.submitting'))
       return
     }
     const diff = diffPlans(state.base, state.current)
@@ -185,32 +214,66 @@ export function PlanCanvas(props: PlanCanvasProps): JSX.Element {
 
   const diff: PlanDiff = useMemo(() => diffPlans(state.base, state.current), [state.base, state.current])
 
-  return (
-    <div className={styles.root}>
+  const canvas = (
+    <div className={styles.root} data-theme={theme === 'follow' ? undefined : theme}>
       <div className={styles.toolbar}>
         <div className={styles.toolbarLeft}>
           <span className={styles.title}>{plan.title}</span>
           <span className={styles.badge}>v{plan.version}</span>
-          <span className={`${styles.badge} ${styles[`planStatus${plan.status}`]}`}>{plan.status}</span>
-          {state.dirty && <span className={`${styles.badge} ${styles.badgeDirty}`}>edited</span>}
+          <span className={`${styles.badge} ${styles[`planStatus${plan.status}`]}`}>{t(`planStatus.${plan.status}`)}</span>
+          {state.dirty && <span className={`${styles.badge} ${styles.badgeDirty}`}>{t('toolbar.edited')}</span>}
         </div>
         <div className={styles.toolbarRight}>
           <button type="button" className={styles.action} onClick={() => { setSelectedId(null); setPanelMode('new'); setConfirmDelete(false) }}>
-            + Add Task
+            + {t('toolbar.addTask')}
           </button>
           <button type="button" className={styles.action} onClick={() => setPositions(layoutPlan(plan))}>
-            Auto layout
+            {t('toolbar.autoLayout')}
           </button>
           <button type="button" className={styles.action} disabled={!state.dirty} onClick={() => dispatch({ type: 'discard' })}>
-            Discard
+            {t('toolbar.discard')}
           </button>
-          <button type="button" className={`${styles.action} ${styles.actionPrimary}`} disabled={!state.dirty} onClick={openDiff}>
-            Apply Changes
+          <button type="button" className={`${styles.action} ${styles.actionPrimary}`} disabled={!state.dirty} onClick={() => setDiffOpen(true)}>
+            {t('toolbar.apply')}
+          </button>
+          <button
+            type="button"
+            className={`${styles.action} ${showMinimap ? styles.actionActive : ''}`}
+            aria-pressed={showMinimap}
+            title={t('toolbar.map')}
+            onClick={() => setShowMinimap((v) => !v)}
+          >
+            {t('toolbar.map')}
+          </button>
+          <label className={styles.selectWrap} title={t('toolbar.theme')}>
+            <span className={styles.visuallyHidden}>{t('toolbar.theme')}</span>
+            <select
+              className={styles.select}
+              value={theme}
+              aria-label={t('toolbar.theme')}
+              onChange={(e) => setTheme(e.target.value as ThemeMode)}
+            >
+              <option value="follow">{t('toolbar.themeFollow')}</option>
+              <option value="day">{t('toolbar.themeDay')}</option>
+              <option value="night">{t('toolbar.themeNight')}</option>
+            </select>
+          </label>
+          <button
+            type="button"
+            className={styles.action}
+            title={fullscreen ? t('toolbar.exitFullscreen') : t('toolbar.fullscreen')}
+            onClick={() => setFullscreen((v) => !v)}
+          >
+            {fullscreen ? t('toolbar.exitFullscreen') : t('toolbar.fullscreen')}
           </button>
         </div>
       </div>
 
-      {state.error && <div className={styles.errorBar}>{state.error}</div>}
+      {state.error && (
+        <div className={styles.errorBar}>
+          {t(`error.${state.error.code}`, state.error.params)}
+        </div>
+      )}
 
       <div className={styles.body}>
         <div className={styles.canvas}>
@@ -229,9 +292,18 @@ export function PlanCanvas(props: PlanCanvasProps): JSX.Element {
             deleteKeyCode={null}
             proOptions={{ hideAttribution: true }}
           >
-            <Background gap={16} />
+            <Background gap={16} color="var(--vp-grid)" />
             <Controls />
-            <MiniMap pannable zoomable />
+            {showMinimap && (
+              <MiniMap
+                pannable
+                zoomable
+                bgColor="var(--vp-minimap-bg)"
+                nodeColor="var(--vp-minimap-node)"
+                nodeStrokeColor="var(--vp-minimap-stroke)"
+                maskColor="var(--vp-minimap-mask)"
+              />
+            )}
           </ReactFlow>
         </div>
 
@@ -242,6 +314,7 @@ export function PlanCanvas(props: PlanCanvasProps): JSX.Element {
                 key="new"
                 mode="new"
                 tasks={plan.tasks}
+                t={t}
                 onSave={(draft) => handleSaveTask(draft)}
                 onCancel={() => { setPanelMode('closed'); setSelectedId(null) }}
               />
@@ -254,6 +327,7 @@ export function PlanCanvas(props: PlanCanvasProps): JSX.Element {
                   tasks={plan.tasks}
                   confirmDelete={confirmDelete}
                   dependents={dependents}
+                  t={t}
                   onSave={(draft) => handleSaveTask(draft, selectedTask.id)}
                   onCancel={() => { setPanelMode('closed'); setSelectedId(null) }}
                   onDelete={handleDelete}
@@ -261,6 +335,7 @@ export function PlanCanvas(props: PlanCanvasProps): JSX.Element {
                 <CommentsPanel
                   taskId={selectedTask.id}
                   comments={plan.comments.filter((c) => c.taskId === selectedTask.id)}
+                  t={t}
                   onAdd={(content) => dispatch({ type: 'addComment', taskId: selectedTask.id, content, author: 'user' })}
                   onRemove={(commentId) => dispatch({ type: 'removeComment', commentId })}
                 />
@@ -274,6 +349,7 @@ export function PlanCanvas(props: PlanCanvasProps): JSX.Element {
         open={diffOpen}
         diff={diff}
         titleById={titleById}
+        t={t}
         submitting={submitting}
         error={submitError}
         onCancel={() => { if (!submitting) setDiffOpen(false) }}
@@ -281,6 +357,12 @@ export function PlanCanvas(props: PlanCanvasProps): JSX.Element {
       />
     </div>
   )
+
+  // Fullscreen mode fills the whole DSH web window (body portal + fixed
+  // overlay), independent of the conversation column layout.
+  return fullscreen
+    ? createPortal(<div className={styles.fullscreen}>{canvas}</div>, document.body)
+    : canvas
 }
 
 /** Re-exported for convenience (canvas width shared by layout). */

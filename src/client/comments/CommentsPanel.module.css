@@ -1,5 +1,5 @@
 .panel {
-  border-top: 1px solid var(--dsw-alias-border-strong, #262b36);
+  border-top: 1px solid var(--vp-border);
   padding-top: 10px;
   display: flex;
   flex-direction: column;
@@ -13,7 +13,7 @@
 
 .empty {
   font-size: 12px;
-  color: var(--dsw-alias-label-tertiary, #6b7484);
+  color: var(--vp-text-tertiary);
 }
 
 .list {
@@ -26,8 +26,8 @@
 }
 
 .item {
-  background: var(--dsw-alias-surface-raised, #171b23);
-  border: 1px solid var(--dsw-alias-border-strong, #2c3340);
+  background: var(--vp-surface-raised);
+  border: 1px solid var(--vp-border);
   border-radius: 6px;
   padding: 6px 8px;
 }
@@ -37,11 +37,11 @@
   align-items: center;
   gap: 6px;
   font-size: 11px;
-  color: var(--dsw-alias-label-tertiary, #6b7484);
+  color: var(--vp-text-tertiary);
 }
 
 .author {
-  color: var(--dsw-alias-label-secondary, #9aa3b2);
+  color: var(--vp-text-secondary);
   font-weight: 600;
 }
 
@@ -53,7 +53,7 @@
   appearance: none;
   border: none;
   background: none;
-  color: var(--dsw-alias-label-tertiary, #6b7484);
+  color: var(--vp-text-tertiary);
   font-size: 14px;
   cursor: pointer;
   line-height: 1;
@@ -61,7 +61,7 @@
 }
 
 .remove:hover {
-  color: #ff8f8f;
+  color: var(--vp-danger);
 }
 
 .content {
@@ -81,10 +81,10 @@
 .input {
   width: 100%;
   box-sizing: border-box;
-  border: 1px solid var(--dsw-alias-border-strong, #2c3340);
+  border: 1px solid var(--vp-border);
   border-radius: 6px;
-  background: var(--dsw-alias-surface-input, #0f1218);
-  color: var(--dsw-alias-text-primary, #e8eaf0);
+  background: var(--vp-surface-input);
+  color: var(--vp-text-primary);
   padding: 6px 8px;
   font-size: 12px;
   font-family: inherit;
@@ -93,15 +93,15 @@
 
 .input:focus {
   outline: none;
-  border-color: var(--dsw-accent-strong, #3b82f6);
+  border-color: var(--vp-accent);
 }
 
 .button {
   align-self: flex-end;
   appearance: none;
-  border: 1px solid var(--dsw-alias-border-strong, #2c3340);
-  background: var(--dsw-alias-surface-raised, #171b23);
-  color: var(--dsw-alias-text-primary, #e8eaf0);
+  border: 1px solid var(--vp-border);
+  background: var(--vp-surface-raised);
+  color: var(--vp-text-primary);
   border-radius: 6px;
   padding: 5px 12px;
   font-size: 12px;

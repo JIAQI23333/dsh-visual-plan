@@ -1,11 +1,98 @@
+/*
+ * Visual Plan palette. "follow" mode (no data-theme) maps to the DSH app's
+ * own design tokens so the canvas tracks the app appearance; data-theme=day
+ * and data-theme=night force explicit palettes.
+ */
+.root {
+  --vp-canvas: var(--dsw-alias-surface-canvas, #0d0f14);
+  --vp-surface-card: var(--dsw-alias-surface-card, #151a22);
+  --vp-surface-raised: var(--dsw-alias-surface-raised, #171b23);
+  --vp-surface-input: var(--dsw-alias-surface-input, #0f1218);
+  --vp-border: var(--dsw-alias-border-strong, #2a3140);
+  --vp-text-primary: var(--dsw-alias-text-primary, #e8eaf0);
+  --vp-text-secondary: var(--dsw-alias-label-secondary, #9aa3b2);
+  --vp-text-tertiary: var(--dsw-alias-label-tertiary, #6b7484);
+  --vp-accent: var(--dsw-accent-strong, #3b82f6);
+  --vp-accent-hover: #2f6fe0;
+  --vp-hover: rgba(255, 255, 255, 0.06);
+  --vp-grid: rgba(255, 255, 255, 0.08);
+  --vp-edge: #5b6472;
+  --vp-minimap-bg: rgba(15, 18, 24, 0.85);
+  --vp-minimap-node: #3b82f6;
+  --vp-minimap-stroke: #1e2a3a;
+  --vp-minimap-mask: rgba(0, 0, 0, 0.6);
+  --vp-warn: #ffb454;
+  --vp-ok: #4fd08c;
+  --vp-info: #5aa2ff;
+  --vp-danger: #ff6b6b;
+  --vp-overlay: rgba(0, 0, 0, 0.55);
+}
+
+.root[data-theme='day'] {
+  --vp-canvas: #f4f6f9;
+  --vp-surface-card: #ffffff;
+  --vp-surface-raised: #f0f2f5;
+  --vp-surface-input: #ffffff;
+  --vp-border: #d4d9e0;
+  --vp-text-primary: #1c2430;
+  --vp-text-secondary: #5a6472;
+  --vp-text-tertiary: #8a93a3;
+  --vp-accent: #2563eb;
+  --vp-accent-hover: #1d4ed8;
+  --vp-hover: rgba(0, 0, 0, 0.05);
+  --vp-grid: rgba(0, 0, 0, 0.09);
+  --vp-edge: #9aa3b2;
+  --vp-minimap-bg: rgba(255, 255, 255, 0.92);
+  --vp-minimap-node: #2563eb;
+  --vp-minimap-stroke: #cbd5e1;
+  --vp-minimap-mask: rgba(255, 255, 255, 0.65);
+  --vp-warn: #b45309;
+  --vp-ok: #15803d;
+  --vp-info: #1d4ed8;
+  --vp-danger: #dc2626;
+  --vp-overlay: rgba(0, 0, 0, 0.35);
+}
+
+.root[data-theme='night'] {
+  --vp-canvas: #0d0f14;
+  --vp-surface-card: #151a22;
+  --vp-surface-raised: #171b23;
+  --vp-surface-input: #0f1218;
+  --vp-border: #2a3140;
+  --vp-text-primary: #e8eaf0;
+  --vp-text-secondary: #9aa3b2;
+  --vp-text-tertiary: #6b7484;
+  --vp-accent: #3b82f6;
+  --vp-accent-hover: #2f6fe0;
+  --vp-hover: rgba(255, 255, 255, 0.06);
+  --vp-grid: rgba(255, 255, 255, 0.08);
+  --vp-edge: #5b6472;
+  --vp-minimap-bg: rgba(15, 18, 24, 0.85);
+  --vp-minimap-node: #3b82f6;
+  --vp-minimap-stroke: #1e2a3a;
+  --vp-minimap-mask: rgba(0, 0, 0, 0.6);
+  --vp-warn: #ffb454;
+  --vp-ok: #4fd08c;
+  --vp-info: #5aa2ff;
+  --vp-danger: #ff6b6b;
+  --vp-overlay: rgba(0, 0, 0, 0.55);
+}
+
 .root {
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 0;
-  background: var(--dsw-alias-surface-canvas, #0d0f14);
-  color: var(--dsw-alias-text-primary, #e8eaf0);
+  background: var(--vp-canvas);
+  color: var(--vp-text-primary);
   font-size: 13px;
+}
+
+.fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: var(--vp-canvas);
 }
 
 .toolbar {
@@ -14,8 +101,9 @@
   justify-content: space-between;
   gap: 12px;
   padding: 10px 14px;
-  border-bottom: 1px solid var(--dsw-alias-border-strong, #262b36);
+  border-bottom: 1px solid var(--vp-border);
   flex: none;
+  flex-wrap: wrap;
 }
 
 .toolbarLeft,
@@ -24,6 +112,7 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
+  flex-wrap: wrap;
 }
 
 .title {
@@ -38,40 +127,40 @@
 .badge {
   padding: 2px 8px;
   border-radius: 999px;
-  background: var(--dsw-alias-surface-raised, #171b23);
-  border: 1px solid var(--dsw-alias-border-strong, #262b36);
-  color: var(--dsw-alias-label-secondary, #9aa3b2);
+  background: var(--vp-surface-raised);
+  border: 1px solid var(--vp-border);
+  color: var(--vp-text-secondary);
   font-size: 11px;
   white-space: nowrap;
 }
 
 .badgeDirty {
-  color: #ffb454;
-  border-color: rgba(255, 180, 84, 0.4);
+  color: var(--vp-warn);
+  border-color: color-mix(in srgb, var(--vp-warn) 45%, transparent);
 }
 
 .planStatusreviewing {
-  color: #ffb454;
+  color: var(--vp-warn);
 }
 
 .planStatusapproved,
 .planStatuscompleted {
-  color: #4fd08c;
+  color: var(--vp-ok);
 }
 
 .planStatusexecuting {
-  color: #5aa2ff;
+  color: var(--vp-info);
 }
 
 .planStatusfailed {
-  color: #ff6b6b;
+  color: var(--vp-danger);
 }
 
 .errorBar {
   padding: 6px 14px;
-  background: rgba(255, 107, 107, 0.12);
-  border-bottom: 1px solid rgba(255, 107, 107, 0.35);
-  color: #ff8f8f;
+  background: color-mix(in srgb, var(--vp-danger) 12%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--vp-danger) 35%, transparent);
+  color: var(--vp-danger);
   font-size: 12px;
   flex: none;
 }
@@ -89,9 +178,9 @@
 
 .action {
   appearance: none;
-  border: 1px solid var(--dsw-alias-border-strong, #2c3340);
-  background: var(--dsw-alias-surface-raised, #171b23);
-  color: var(--dsw-alias-text-primary, #e8eaf0);
+  border: 1px solid var(--vp-border);
+  background: var(--vp-surface-raised);
+  color: var(--vp-text-primary);
   border-radius: 6px;
   padding: 5px 10px;
   font-size: 12px;
@@ -100,7 +189,7 @@
 }
 
 .action:hover:not(:disabled) {
-  border-color: var(--dsw-alias-border-focus, #4a5568);
+  border-color: var(--vp-accent);
 }
 
 .action:disabled {
@@ -108,22 +197,59 @@
   cursor: default;
 }
 
+.actionActive {
+  border-color: var(--vp-accent);
+  color: var(--vp-accent);
+  background: color-mix(in srgb, var(--vp-accent) 12%, transparent);
+}
+
 .actionPrimary {
-  background: var(--dsw-accent-strong, #3b82f6);
+  background: var(--vp-accent);
   border-color: transparent;
   color: #fff;
   font-weight: 600;
 }
 
 .actionPrimary:hover:not(:disabled) {
-  background: var(--dsw-accent-strong-hover, #2f6fe0);
+  background: var(--vp-accent-hover);
+}
+
+.selectWrap {
+  display: inline-flex;
+  align-items: center;
+}
+
+.select {
+  appearance: none;
+  border: 1px solid var(--vp-border);
+  background: var(--vp-surface-raised);
+  color: var(--vp-text-primary);
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.select:focus-visible {
+  outline: 2px solid var(--vp-accent);
+  outline-offset: 1px;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 .panel {
   width: 320px;
   flex: none;
-  border-left: 1px solid var(--dsw-alias-border-strong, #262b36);
-  background: var(--dsw-alias-surface-card, #12151b);
+  border-left: 1px solid var(--vp-border);
+  background: var(--vp-surface-card);
   overflow-y: auto;
   padding: 12px;
   display: flex;
@@ -136,17 +262,17 @@
 .node {
   width: 220px;
   border-radius: 10px;
-  background: var(--dsw-alias-surface-card, #151a22);
-  border: 1px solid var(--dsw-alias-border-strong, #2a3140);
+  background: var(--vp-surface-card);
+  border: 1px solid var(--vp-border);
   padding: 8px 10px;
   font-size: 12px;
-  color: var(--dsw-alias-text-primary, #e8eaf0);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  color: var(--vp-text-primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
 }
 
 .nodeSelected {
-  border-color: var(--dsw-accent-strong, #3b82f6);
-  box-shadow: 0 0 0 1px var(--dsw-accent-strong, #3b82f6), 0 4px 14px rgba(59, 130, 246, 0.25);
+  border-color: var(--vp-accent);
+  box-shadow: 0 0 0 1px var(--vp-accent), 0 4px 14px rgba(59, 130, 246, 0.22);
 }
 
 .nodeHeader {
@@ -165,7 +291,7 @@
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.06em;
-  color: var(--dsw-alias-label-secondary, #9aa3b2);
+  color: var(--vp-text-secondary);
 }
 
 .nodeTypeLabel {
@@ -180,7 +306,7 @@
 
 .nodeDescription {
   margin-top: 3px;
-  color: var(--dsw-alias-label-secondary, #9aa3b2);
+  color: var(--vp-text-secondary);
   line-height: 1.4;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -192,7 +318,7 @@
 .nodeDepends {
   margin-top: 4px;
   font-size: 11px;
-  color: var(--dsw-alias-label-tertiary, #6b7484);
+  color: var(--vp-text-tertiary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -207,37 +333,93 @@
 }
 
 .statuspending {
-  color: #9aa3b2;
-  border-color: #3a4150;
+  color: var(--vp-text-secondary);
+  border-color: var(--vp-border);
 }
 
 .statusrunning {
-  color: #5aa2ff;
-  border-color: rgba(90, 162, 255, 0.45);
+  color: var(--vp-info);
+  border-color: color-mix(in srgb, var(--vp-info) 45%, transparent);
 }
 
 .statuscompleted {
-  color: #4fd08c;
-  border-color: rgba(79, 208, 140, 0.45);
+  color: var(--vp-ok);
+  border-color: color-mix(in srgb, var(--vp-ok) 45%, transparent);
 }
 
 .statusfailed {
-  color: #ff6b6b;
-  border-color: rgba(255, 107, 107, 0.45);
+  color: var(--vp-danger);
+  border-color: color-mix(in srgb, var(--vp-danger) 45%, transparent);
 }
 
 .statusskipped {
-  color: #6b7484;
-  border-color: #2f3542;
+  color: var(--vp-text-tertiary);
+  border-color: var(--vp-border);
 }
 
 .empty {
   padding: 48px 24px;
   text-align: center;
-  color: var(--dsw-alias-label-tertiary, #6b7484);
+  color: var(--vp-text-tertiary);
   font-size: 13px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
+}
+
+/* --- React Flow chrome: high-contrast controls, edges, minimap --- */
+
+:global(.react-flow__controls) {
+  border: 1px solid var(--vp-border);
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+  background: var(--vp-surface-raised);
+  overflow: hidden;
+}
+
+:global(.react-flow__controls-button) {
+  background: var(--vp-surface-raised);
+  border-bottom: 1px solid var(--vp-border);
+  color: var(--vp-text-primary);
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+:global(.react-flow__controls-button:last-child) {
+  border-bottom: none;
+}
+
+:global(.react-flow__controls-button:hover) {
+  background: var(--vp-hover);
+}
+
+:global(.react-flow__controls-button:focus-visible) {
+  outline: 2px solid var(--vp-accent);
+  outline-offset: -2px;
+}
+
+:global(.react-flow__controls-button svg) {
+  fill: currentColor;
+  width: 16px;
+  height: 16px;
+}
+
+:global(.react-flow__edge-path) {
+  stroke: var(--vp-edge);
+}
+
+:global(.react-flow__edge.selected .react-flow__edge-path),
+:global(.react-flow__edge:focus .react-flow__edge-path) {
+  stroke: var(--vp-accent);
+}
+
+:global(.react-flow__minimap) {
+  border: 1px solid var(--vp-border);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
 }

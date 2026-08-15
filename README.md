@@ -77,7 +77,9 @@ Each approved plan is stored in the session's workspace:
 ## Scope (v1)
 
 In scope: structured plan + markdown, node graph, add/edit/delete tasks,
-dependency edges, comments, plan diff, versioned revisions, DSH write-back.
+dependency edges, comments, plan diff, versioned revisions, DSH write-back,
+canvas preferences (map toggle, follow/day/night theme, window fullscreen),
+and zh/en localization that follows the DSH Language setting (default zh).
 
 Out of scope (future): multi-agent, Claude/Codex/Gemini adapters, real-time
 collaboration, execution visualization, AI plan review.
