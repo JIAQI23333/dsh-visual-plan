@@ -39,7 +39,7 @@ User request → DSH Plan Mode → structured VisualPlan JSON → node-graph can
   falls back to the Markdown plan when parsing fails.
 - **Canvas capabilities**: theme (follow / day / night), minimap toggle, fullscreen, interactivity toggle,
   undo/redo, keyboard shortcuts (Delete, Cmd/Ctrl+Z, Cmd/Ctrl+S, F, …),
-  high-contrast controls in the bottom-left corner.
+  a grouped "More" dropdown (View / Appearance), high-contrast controls in the bottom-left corner.
 - **Localization**: 中文 / English, following the DSH Language setting (Chinese by default).
 - **Decoupled from DSH core**: UI is isolated from the Agent Core; disabling the plugin leaves DSH's built-in Plan Mode untouched.
 

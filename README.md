@@ -36,7 +36,8 @@ Agent 在 Plan Mode 中生成的计划会自动变成一张可编辑的节点图
   执行绑定到批准版本，为后续动态重新规划打好基础。
 - **健壮性**：JSON 校验、依赖不存在检测、循环依赖检测；解析失败时回退 Markdown 计划。
 - **界面能力**：主题跟随 / 白天 / 黑夜、地图开关、全屏、交互开关、Undo/Redo、
-  快捷键（Delete、Cmd/Ctrl+Z、Cmd/Ctrl+S、F 等）、左下角高对比度控件。
+  快捷键（Delete、Cmd/Ctrl+Z、Cmd/Ctrl+S、F 等）、工具栏「更多」下拉（视图/外观分组）、
+  左下角高对比度控件。
 - **国际化**：中文 / English，跟随 DSH 自带 Language 设置（默认中文）。
 - **与 DSH 解耦**：UI 与 Agent Core 隔离；关闭插件后 DSH 原有 Plan Mode 完全不受影响。
 
