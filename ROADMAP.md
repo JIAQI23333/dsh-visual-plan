@@ -27,7 +27,7 @@
 - [x] 全新 profile 从零安装验证（GitHub 分发路径）：
   真实执行 `dsh plugin --profile <scratch> add github:JIAQI23333/dsh-visual-plan`，
   prepare 构建成功、`--dump-config` 含插件层、web boot 通过、GUI probe 全绿（标签注册 + 视图挂载 + 0 控制台错误）。
-- [ ] 首次 release tag（v0.1.0）与 CHANGELOG 对齐
+- [x] 首次 release tag（v0.1.0）与 CHANGELOG 对齐
 
 ### Plan ↔ Agent 状态边界（v0.1 已落地）
 
