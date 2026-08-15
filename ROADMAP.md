@@ -44,15 +44,52 @@ Plan v3（新草稿）         draft         approvedVersion = 2      executionV
 执行永远绑定到 `approvedVersion` / `executionVersion`；回写消息显式声明批准版本，
 并要求 Agent 执行中遇到变化时先提出新计划、由用户批准，而不是静默修改已批准的计划。
 
-## v0.1.1 — 编辑基础体验与执行绑定（规划中）
+## v0.1.1 — 编辑基础体验与执行绑定（计划已定，待开发）
 
-按优先级：
+目标：补齐节点编辑器的基本功（Undo/Redo + 快捷键），并把 v0.1 的
+「执行绑定批准版本」承诺在数据层闭环（Plan Snapshot + Execution Version Lock）。
+**不引入新的大功能**，全部为补强与修补。
 
-- [ ] Undo / Redo（节点编辑器的基础体验，优先修补项）
-- [ ] 快捷键：Delete、Cmd/Ctrl + Z、Cmd/Ctrl + Shift + Z、Cmd/Ctrl + S、Space（平移）、F（Fit View）
-- [ ] Plan Snapshot：执行开始时保存执行快照，执行不再依赖 `current plan.json`
-- [ ] Execution Version Lock：执行期间锁定 `executionVersion`，新草稿不得替换
-- [ ] Bug Fixes（来自真实任务验证）
+### P0 — 编辑基础体验
+
+- [ ] **Undo / Redo**
+  - `PlanEditorState` 增加 `past / future` 快照栈（深度上限 100），所有 reducer 变更入栈。
+  - 工具栏按钮 + 快捷键（Cmd/Ctrl+Z / Shift+Z），无可撤销/重做时禁用。
+  - `discard`、`applied`、`reset` 清空历史；评论增删同样可撤销。
+  - 测试：连续操作撤销/重做还原、深度上限、applied 后历史清空。
+- [ ] **快捷键**（仅在输入框未聚焦时生效，不拦截打字）
+  - Delete / Backspace：删除选中节点（复用现有确认流程）
+  - Cmd/Ctrl + Z / Cmd/Ctrl + Shift + Z：撤销 / 重做
+  - Cmd/Ctrl + S：打开 Diff 确认（等价「应用修改」）
+  - Space：画布平移；F：Fit View
+  - 快捷键提示写入 i18n（中英），工具栏按钮 title 同步
+
+### P0 — 执行绑定闭环
+
+- [ ] **Plan Snapshot**
+  - 执行开始（Apply）时把不可变快照绑定到 `revisions/vN.json`（该文件本就不可变）。
+  - 新增 `.plan/execution.json`：`{ planId, executionVersion, revision, startedAt, status }`；
+    Apply 时写入，后续草稿 / 新 Apply 不得修改它。
+  - 测试：Apply 创建 execution 记录；v5 保存后 v4 的 execution 记录不变。
+- [ ] **Execution Version Lock**
+  - 不变式：`executionVersion` 一旦写入即为只读，任何编辑 / Apply 不得改写。
+  - 执行中 Apply：`approvedVersion` 正常 +1（v5），但 `executionVersion` 保持 v4；
+    工具栏显示「v5 · 已批准 v5 · 执行中 v4」。
+  - 回写消息继续绑定 v4；v5 在 v4 完成（或用户显式启动）前不交给 Agent。
+  - schema 校验：对 executing 计划拒绝 / 修复 `executionVersion` 变化。
+  - 测试：锁不变式、执行中 Apply 的行为、校验规则。
+
+### P1 — 验证反馈修复
+
+- [ ] 真实任务验证（5～10 个）中发现的 Bug 修复
+- [ ] 已知候选：删除节点后的选择状态清理、空状态语言切换、快捷键与输入框冲突
+
+### 验收标准（v0.1.1 Release）
+
+- [ ] typecheck + build + verify（含新增用例）全绿
+- [ ] GUI probe 通过（标签注册、视图挂载、0 控制台错误）
+- [ ] 全新 profile 从 GitHub 安装 `v0.1.1` tag 验证通过
+- [ ] CHANGELOG / ROADMAP 更新，tag `v0.1.1`
 
 ## v0.2 — 计划体验（规划中，按优先级排序）
 

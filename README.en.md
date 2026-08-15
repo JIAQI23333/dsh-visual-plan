@@ -168,8 +168,8 @@ Plan Mode → `exit_plan_mode` → VisualPlan → canvas.
 
 ## Related documents
 
-- [DSH plugin development guide](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/user/develop/basic/index.en.md)
-- [DSH plugin configuration](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/user/develop/basic/config.en.md)
+- [DSH plugin development guide](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/user/develop/basic/index.md)
+- [DSH plugin configuration](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/user/develop/basic/config.md)
 - [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
 
 ## License
