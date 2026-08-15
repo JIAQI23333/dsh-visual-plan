@@ -18,6 +18,10 @@ Agent 在 Plan Mode 中生成的计划会自动变成一张可编辑的节点图
         → 生成新版本（v1 → v2 → …）→ 修订计划回写 DSH → 按批准的计划执行
 ```
 
+## 演示
+
+![Visual Plan 画布演示](assets/demo.png)
+
 ## 特性
 
 - **计划自动可视化**：Plan Mode 的 `exit_plan_mode` 输出自动转为 VisualPlan JSON，并用 DAG 自动布局渲染为节点图（节点不重叠、依赖清晰）。
@@ -158,8 +162,8 @@ Plan Mode → `exit_plan_mode` → VisualPlan → 画布。
 
 ## 相关文档
 
-- [DSH 插件开发入门](https://github.com/deepseek-ai/deepseek-harness/blob/main/docs/user/develop/basic/index.zh.md)
-- [DSH 插件配置](https://github.com/deepseek-ai/deepseek-harness/blob/main/docs/user/develop/basic/config.zh.md)
+- [DSH 插件开发入门](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/user/develop/basic/index.zh.md)
+- [DSH 插件配置](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/user/develop/basic/config.zh.md)
 - [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
 
 ## License

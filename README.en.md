@@ -19,6 +19,10 @@ User request → DSH Plan Mode → structured VisualPlan JSON → node-graph can
         → new version (v1 → v2 → …) → revised plan written back to DSH → execute
 ```
 
+## Demo
+
+![Visual Plan canvas demo](assets/demo.png)
+
 ## Features
 
 - **Automatic plan visualization**: the `exit_plan_mode` output is converted into a VisualPlan JSON
@@ -164,8 +168,8 @@ Plan Mode → `exit_plan_mode` → VisualPlan → canvas.
 
 ## Related documents
 
-- [DSH plugin development guide](https://github.com/deepseek-ai/deepseek-harness/blob/main/docs/user/develop/basic/index.en.md)
-- [DSH plugin configuration](https://github.com/deepseek-ai/deepseek-harness/blob/main/docs/user/develop/basic/config.en.md)
+- [DSH plugin development guide](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/user/develop/basic/index.en.md)
+- [DSH plugin configuration](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/user/develop/basic/config.en.md)
 - [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
 
 ## License
